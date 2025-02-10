@@ -2,10 +2,15 @@
 pkgs.mkShell {
   buildInputs = with pkgs; [
     gcc
-    glfw
+    raylib
+    wayland
+    wayland-protocols
+    libGL
+    xorg.libX11
+    libxkbcommon
   ];
 
   shellHook = ''
-    echo "Run make build to get started"
+    export RAYLIB_WAYLAND_LIBRARY_PATH="${pkgs.wayland}/lib/libwayland-client.so"
   '';
 }

@@ -50,6 +50,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+bin/
 
 # Incase the template didn't include this for some reason
 .env

@@ -1,28 +1,17 @@
-#include <GLFW/glfw3.h>
+#include <stdio.h>
+#include <raylib.h>
 
 int main(void) {
-    GLFWwindow* window;
-
-    if (!glfwInit()) return -1;
-
-    window = glfwCreateWindow(640, 480, "Simple Music Player", NULL, NULL);
-    if (!window) {
-        glfwTerminate();
-        return -1;
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetTargetFPS(60);
+    InitWindow(800, 600, "Simple Music Player");
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(CLITERAL(Color){ 23, 23, 23, 255 });
+        DrawFPS(5, 5);
+        EndDrawing();
     }
-
-    /* Make the window's context current */
-    glfwMakeContextCurrent(window);
-
-    /* Loop until the user closes the window */
-    while (!glfwWindowShouldClose(window)) {
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glfwSwapBuffers(window);
-
-        glfwPollEvents();
-    }
-
-    glfwTerminate();
+    CloseWindow();
     return 0;
 }
+

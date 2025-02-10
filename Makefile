@@ -1,7 +1,8 @@
 # gcc -o main main.c
 CC=gcc
 CFlags=-Wall -Wextra
-CLibs=-lglfw -lGL -lm -lpthread -ldl -lrt
+# CLibs= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 -lwayland-client -lxkbcommon
+CLibs= -lraylib -lGL -lm -lpthread -ldl -lrt
 BIN=./bin/smp
 
 preset:
