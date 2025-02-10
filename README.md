@@ -5,7 +5,8 @@ Simple Music Player
 This is my attempt at a music player.
 
 ## TODO:
-- [ ] Quit the window
+- [x] Quit the window
+- [x] Read from dir
 - [ ] Load music/Read from dir
 - [ ] Play Music
 - [ ] Keybinds for next/prev play/pause

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <raylib.h>
+#include <stdlib.h>
 
 #define WIDTH 800
 #define HEIGHT 600
@@ -8,7 +9,26 @@
 #define FONT_SIZE 15
 
 int main(void) {
-    /*SetConfigFlags(FLAG_WINDOW_RESIZABLE);*/
+
+    char* home = getenv("HOME");
+    char* musicDir = "/Music";
+    char toMusic[256];
+
+    if (snprintf(toMusic, sizeof(toMusic), "%s%s", home, musicDir) < 1){
+        fprintf(stderr, "failed to join tomusics");
+        return 1;
+    };
+
+
+    if(!DirectoryExists(toMusic)) {
+        fprintf(stderr, "failed to load directory %s", toMusic);
+        return 1;
+    };
+    FilePathList files  = LoadDirectoryFiles(toMusic);
+    for (unsigned int i = 0; i < files.count; ++i) {
+        printf("path: %s\n", files.paths[i]);
+    }
+
     SetTargetFPS(60);
     InitWindow(WIDTH, HEIGHT, "Simple Music Player");
 
@@ -58,7 +78,8 @@ int main(void) {
 
         EndDrawing();
     }
+
+    UnloadDirectoryFiles(files);
     CloseWindow();
     return 0;
 }
-
