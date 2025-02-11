@@ -9,6 +9,7 @@
 #define FONT_SIZE 18
 #define PADDING 20
 #define LINE_SPACE 20
+#define SEEK_SKIP 10 //How many seconds ahead/behind to seek
 
 typedef struct {
     float scrollOffset;
@@ -79,12 +80,13 @@ void DrawFileList(ScrollableContainer* container, FilePathList files, Font font)
     }
 }
 
-void DrawProgressBar(int screenHeight, int screenWidth) {
+void DrawProgressBar(int screenHeight, int screenWidth, float currentTime, float totalTime) {
+    float barWidth = screenWidth - 100;
     DrawRectangleRounded(
         (Rectangle){
             50,
             screenHeight - 50,
-            screenWidth - 100,
+            barWidth,
             SEEK_HEIGHT,
         },
         RADIUS*100,
@@ -96,7 +98,7 @@ void DrawProgressBar(int screenHeight, int screenWidth) {
         (Rectangle){
             50,
             screenHeight - 50,
-            screenWidth/2,
+            (currentTime / totalTime) * barWidth,
             SEEK_HEIGHT,
         },
         RADIUS*100,
@@ -110,6 +112,7 @@ int main(void) {
     SetTargetFPS(60);
 
     InitWindow(WIDTH, HEIGHT, "Simple Music Player");
+    InitAudioDevice();
 
     char* home = getenv("HOME");
     char* musicDir = "/Music";
@@ -146,9 +149,12 @@ int main(void) {
         }
     };
 
-    // Main game loop
+
+    int activeTrack = 0;
+    Music audio = LoadMusicStream(files.paths[activeTrack]);
+    bool pause = true;
+
     while (!WindowShouldClose()) {
-        // Update container bounds on window resize
         fileList.bounds = (Rectangle){
             50,
             50,
@@ -157,22 +163,50 @@ int main(void) {
         };
 
         UpdateScrollableContainer(&fileList);
+        UpdateMusicStream(audio);
 
         // Exit on CTRL+Q
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_Q)) break;
 
+        if (IsKeyPressed(KEY_SPACE)) {
+            pause = !pause;
+
+            if (pause) PauseMusicStream(audio);
+            else PlayMusicStream(audio);
+        }
+
+        if (IsKeyPressed(KEY_N)) {
+            if ((unsigned int)(activeTrack + 1) <= files.count) {
+                activeTrack += 1;
+            } else {
+                // Loop around if at the end
+                activeTrack = 0;
+            }
+
+            UnloadMusicStream(audio);
+            audio = LoadMusicStream(files.paths[activeTrack]);
+        }
+
+        if (IsKeyPressed(KEY_P)) {
+            if (activeTrack <= 0) {
+                activeTrack = files.count - 1;
+            } else {
+                activeTrack -= 1;
+            }
+
+            UnloadMusicStream(audio);
+            audio = LoadMusicStream(files.paths[activeTrack]);
+        }
+
         BeginDrawing();
-        {
-            ClearBackground(CLITERAL(Color){ 23, 23, 23, 255 });
+        ClearBackground(CLITERAL(Color){ 23, 23, 23, 255 });
 
-            // Draw FPS counter
-            DrawFPS(GetScreenWidth()-100, 10);
+        DrawFPS(GetScreenWidth()-100, 10);
 
-            // Draw file list container
-            DrawRectangleRounded(fileList.bounds, RADIUS/2, 10, DARKGRAY);
-            DrawFileList(&fileList, files, spaceMono);
+        DrawRectangleRounded(fileList.bounds, RADIUS/2, 10, DARKGRAY);
+        DrawFileList(&fileList, files, spaceMono);
 
-            // Draw player status
+        if (!pause) {
             DrawTextEx(
                 spaceMono,
                 "Playing",
@@ -181,14 +215,51 @@ int main(void) {
                 2,
                 RAYWHITE
             );
+        } else {
+            DrawTextEx(
+                spaceMono,
+                "Paused",
+                (Vector2){50, (float)GetScreenHeight()-100},
+                FONT_SIZE,
+                2,
+                RAYWHITE
+            );
 
-            DrawProgressBar(GetScreenHeight(), GetScreenWidth());
         }
+        float timeAudioPlayed = GetMusicTimePlayed(audio);
+        float totalAudioTime = GetMusicTimeLength(audio);
+        if(IsKeyPressed(KEY_RIGHT)) {
+            float pos = SEEK_SKIP + timeAudioPlayed;
+            if (pos > totalAudioTime) pos = totalAudioTime;
+            SeekMusicStream(audio, pos);
+        }
+
+        if(IsKeyPressed(KEY_LEFT)) {
+            float pos = timeAudioPlayed - SEEK_SKIP;
+            if (pos < 0) pos = 0;
+            SeekMusicStream(audio, pos);
+        }
+
+        if (totalAudioTime - timeAudioPlayed <= 0.1) {
+            if ((unsigned int)(activeTrack + 1) <= files.count) {
+                activeTrack += 1;
+
+                UnloadMusicStream(audio);
+                audio = LoadMusicStream(files.paths[activeTrack]);
+                PlayMusicStream(audio);
+            } else {
+                StopMusicStream(audio);
+            }
+        }
+
+        DrawProgressBar(GetScreenHeight(), GetScreenWidth(),timeAudioPlayed,totalAudioTime);
         EndDrawing();
     }
 
+    UnloadMusicStream(audio);
     UnloadFont(spaceMono);
     UnloadDirectoryFiles(files);
+    CloseAudioDevice();
     CloseWindow();
 
     return 0;
