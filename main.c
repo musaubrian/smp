@@ -176,7 +176,7 @@ int main(void) {
         }
 
         if (IsKeyPressed(KEY_N)) {
-            if ((unsigned int)(activeTrack + 1) <= files.count) {
+            if ((unsigned int)(activeTrack + 1) < files.count) {
                 activeTrack += 1;
             } else {
                 // Loop around if at the end
@@ -185,6 +185,7 @@ int main(void) {
 
             UnloadMusicStream(audio);
             audio = LoadMusicStream(files.paths[activeTrack]);
+            PlayMusicStream(audio);
         }
 
         if (IsKeyPressed(KEY_P)) {
@@ -196,6 +197,7 @@ int main(void) {
 
             UnloadMusicStream(audio);
             audio = LoadMusicStream(files.paths[activeTrack]);
+            PlayMusicStream(audio);
         }
 
         BeginDrawing();
@@ -241,15 +243,15 @@ int main(void) {
         }
 
         if (totalAudioTime - timeAudioPlayed <= 0.1) {
-            if ((unsigned int)(activeTrack + 1) <= files.count) {
+            if ((unsigned int)(activeTrack + 1) < files.count) {
                 activeTrack += 1;
-
-                UnloadMusicStream(audio);
-                audio = LoadMusicStream(files.paths[activeTrack]);
-                PlayMusicStream(audio);
             } else {
-                StopMusicStream(audio);
+                activeTrack = 0;
             }
+
+            UnloadMusicStream(audio);
+            audio = LoadMusicStream(files.paths[activeTrack]);
+            PlayMusicStream(audio);
         }
 
         DrawProgressBar(GetScreenHeight(), GetScreenWidth(),timeAudioPlayed,totalAudioTime);
