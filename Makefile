@@ -4,12 +4,11 @@ CFlags=-Wall -Wextra
 # CLibs= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 -lwayland-client -lxkbcommon
 CLibs= -lraylib -lGL -lm -lpthread -ldl -lrt
 BIN=./bin/smp
+IN=main.c
 
-preset:
+build:$(IN)
 	@mkdir -p ./bin
-
-build:preset
-	$(CC) -o $(BIN) main.c $(CFlags) $(CLibs)
+	$(CC) -o $(BIN) $(IN) $(CFlags) $(CLibs)
 
 run:build
 	$(BIN)

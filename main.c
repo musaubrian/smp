@@ -2,84 +2,194 @@
 #include <raylib.h>
 #include <stdlib.h>
 
-#define WIDTH 800
-#define HEIGHT 600
+#define WIDTH 1080
+#define HEIGHT 720
 #define RADIUS 0.05
 #define SEEK_HEIGHT 10
-#define FONT_SIZE 15
+#define FONT_SIZE 18
+#define PADDING 20
+#define LINE_SPACE 20
+
+typedef struct {
+    float scrollOffset;
+    Rectangle bounds;
+    Rectangle content;
+} ScrollableContainer;
+
+char* joinStr(const char* base, const char* end) {
+    static char path[256];
+    if (snprintf(path, sizeof(path), "%s%s", base, end) < 1) {
+        return NULL;
+    }
+    return path;
+}
+
+
+// Scroll container update logic
+void UpdateScrollableContainer(ScrollableContainer* container) {
+    float maxScroll = container->content.height - container->bounds.height + 1.5*PADDING;
+    float wheel = GetMouseWheelMove();
+
+    if (wheel != 0 && CheckCollisionPointRec(GetMousePosition(), container->bounds)) {
+        container->scrollOffset += wheel * 20;
+        if (container->scrollOffset > 0) container->scrollOffset = 0;
+        if (container->scrollOffset < -maxScroll) container->scrollOffset = -maxScroll;
+    }
+}
+
+// File list drawing function
+void DrawFileList(ScrollableContainer* container, FilePathList files, Font font) {
+    BeginScissorMode(container->bounds.x, container->bounds.y,
+                     container->bounds.width, container->bounds.height);
+
+    float currentY = container->bounds.y + container->scrollOffset;
+
+    for (unsigned int i = 0; i < files.count; ++i) {
+        DrawTextEx(font,
+           GetFileName(files.paths[i]),
+           (Vector2){ container->bounds.x + PADDING, currentY + PADDING },
+           FONT_SIZE,
+           2,
+           RAYWHITE);
+
+        currentY += FONT_SIZE + LINE_SPACE;
+    }
+
+    EndScissorMode();
+
+    // Update content height for scrolling
+    container->content.height = currentY - container->bounds.y;
+
+    // Scroll Indicator
+    if (container->content.height > container->bounds.height) {
+        float scrollBarHeight = (container->bounds.height / container->content.height) * container->bounds.height;
+        float scrollBarY = container->bounds.y - (container->scrollOffset / container->content.height) * container->bounds.height;
+
+        DrawRectangleRounded(
+            (Rectangle){
+                container->bounds.x + container->bounds.width - 10,
+                scrollBarY,
+                5,
+                scrollBarHeight
+            },
+            1.0,
+            4,
+            LIGHTGRAY
+        );
+    }
+}
+
+void DrawProgressBar(int screenHeight, int screenWidth) {
+    DrawRectangleRounded(
+        (Rectangle){
+            50,
+            screenHeight - 50,
+            screenWidth - 100,
+            SEEK_HEIGHT,
+        },
+        RADIUS*100,
+        10,
+        DARKGRAY
+    );
+
+    DrawRectangleRounded(
+        (Rectangle){
+            50,
+            screenHeight - 50,
+            screenWidth/2,
+            SEEK_HEIGHT,
+        },
+        RADIUS*100,
+        10,
+        LIGHTGRAY
+    );
+}
 
 int main(void) {
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetTargetFPS(60);
+
+    InitWindow(WIDTH, HEIGHT, "Simple Music Player");
 
     char* home = getenv("HOME");
     char* musicDir = "/Music";
-    char toMusic[256];
-
-    if (snprintf(toMusic, sizeof(toMusic), "%s%s", home, musicDir) < 1){
-        fprintf(stderr, "failed to join tomusics");
+    char* toMusic = joinStr(home, musicDir);
+    if (toMusic == NULL) {
+        fprintf(stderr, "Failed to create music path\n");
         return 1;
-    };
-
-
-    if(!DirectoryExists(toMusic)) {
-        fprintf(stderr, "failed to load directory %s", toMusic);
-        return 1;
-    };
-    FilePathList files  = LoadDirectoryFiles(toMusic);
-    for (unsigned int i = 0; i < files.count; ++i) {
-        printf("path: %s\n", files.paths[i]);
     }
 
-    SetTargetFPS(60);
-    InitWindow(WIDTH, HEIGHT, "Simple Music Player");
+    // Load font and setup text
+    SetTextLineSpacing(LINE_SPACE);
+    Font spaceMono = LoadFontEx("./fonts/SpaceMono-Regular.ttf", FONT_SIZE*2, 0, 250);
 
+    // Check directory and load files
+    if(!DirectoryExists(toMusic)) {
+        fprintf(stderr, "Failed to load directory %s", toMusic);
+        return 1;
+    }
+    FilePathList files = LoadDirectoryFiles(toMusic);
+
+    // Initialize scrollable container
+    ScrollableContainer fileList = {
+        .scrollOffset = 0,
+        .bounds = (Rectangle) {
+            50, 50,
+            GetScreenWidth() - 100,
+            GetScreenHeight() - 200,
+        },
+        .content = (Rectangle){
+            50,
+            50,
+            GetScreenWidth() - 100,
+            0
+        }
+    };
+
+    // Main game loop
     while (!WindowShouldClose()) {
-        // CTRL+q to exit
-        if (IsKeyDown(341) && IsKeyPressed(81)) break;
+        // Update container bounds on window resize
+        fileList.bounds = (Rectangle){
+            50,
+            50,
+            GetScreenWidth() - 100,
+            GetScreenHeight() - 200
+        };
+
+        UpdateScrollableContainer(&fileList);
+
+        // Exit on CTRL+Q
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_Q)) break;
+
         BeginDrawing();
+        {
+            ClearBackground(CLITERAL(Color){ 23, 23, 23, 255 });
 
-        ClearBackground(CLITERAL(Color){ 23, 23, 23, 255 });
-        DrawFPS(GetScreenWidth()-100, 10);
-         DrawRectangleRounded(
-            CLITERAL(Rectangle){
-                50,                    // x position: 50px from left
-                50,                    // y position: 50px from top
-                GetScreenWidth() - 100,  // width: screen width minus 100 (50px margin on each side)
-                GetScreenHeight() - 200  // height: screen height minus 100 (50px margin on each side)
-            },
-            RADIUS/2,
-            10,
-            DARKGRAY
-        );
+            // Draw FPS counter
+            DrawFPS(GetScreenWidth()-100, 10);
 
-/*void DrawText(const char *text, int posX, int posY, int fontSize, Color color); */
-        DrawText("Playing: ", 50, GetScreenHeight()-100, FONT_SIZE, RAYWHITE);
-         DrawRectangleRounded(
-            CLITERAL(Rectangle){
-                50,                      // x position: 50px from left
-                GetScreenHeight()- 50,   // y position: 50px from top
-                GetScreenWidth() - 100,  // width: screen width minus 100 (50px margin on each side)
-                SEEK_HEIGHT,
-            },
-            RADIUS*100,
-            10,
-            DARKGRAY
-        );
-         DrawRectangleRounded(
-            CLITERAL(Rectangle){
-                50,                    // x position: 50px from left
-                GetScreenHeight()- 50,
-                GetScreenWidth()/2,
-                SEEK_HEIGHT,
-            },
-            RADIUS*100,
-            10,
-            LIGHTGRAY
-        );
+            // Draw file list container
+            DrawRectangleRounded(fileList.bounds, RADIUS/2, 10, DARKGRAY);
+            DrawFileList(&fileList, files, spaceMono);
 
+            // Draw player status
+            DrawTextEx(
+                spaceMono,
+                "Playing",
+                (Vector2){50, (float)GetScreenHeight()-100},
+                FONT_SIZE,
+                2,
+                RAYWHITE
+            );
+
+            DrawProgressBar(GetScreenHeight(), GetScreenWidth());
+        }
         EndDrawing();
     }
 
+    UnloadFont(spaceMono);
     UnloadDirectoryFiles(files);
     CloseWindow();
+
     return 0;
 }
