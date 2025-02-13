@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <raylib.h>
 #include <stdlib.h>
+#include <libgen.h>
 
 #define WIDTH 1080
 #define HEIGHT 720
@@ -39,19 +40,28 @@ void UpdateScrollableContainer(ScrollableContainer* container) {
 }
 
 // File list drawing function
-void DrawFileList(ScrollableContainer* container, FilePathList files, Font font) {
+void DrawFileList(ScrollableContainer* container, FilePathList files, Font font, unsigned int currentTrack) {
     BeginScissorMode(container->bounds.x, container->bounds.y,
                      container->bounds.width, container->bounds.height);
 
     float currentY = container->bounds.y + container->scrollOffset;
 
     for (unsigned int i = 0; i < files.count; ++i) {
-        DrawTextEx(font,
-           GetFileName(files.paths[i]),
-           (Vector2){ container->bounds.x + PADDING, currentY + PADDING },
-           FONT_SIZE,
-           2,
-           RAYWHITE);
+        if (i == currentTrack) {
+            DrawTextEx(font,
+               GetFileName(files.paths[i]),
+               (Vector2){ container->bounds.x + PADDING, currentY + PADDING },
+               FONT_SIZE,
+               2,
+               BLUE);
+        } else {
+            DrawTextEx(font,
+               GetFileName(files.paths[i]),
+               (Vector2){ container->bounds.x + PADDING, currentY + PADDING },
+               FONT_SIZE,
+               2,
+               RAYWHITE);
+        }
 
         currentY += FONT_SIZE + LINE_SPACE;
     }
