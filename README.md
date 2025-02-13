@@ -1,8 +1,7 @@
 # SMP
 
 Simple Music Player
-This is my attempt at a music player that does that and only that
-play music.
+This is my attempt at a music player that does that and only that.
 
 ## TODO:
 - [x] Quit the window
@@ -28,12 +27,12 @@ We make alot of assumptions:
 
 ## Controls
 
-| Key           | Action                    |
-| ---           | ---                       |
-| <SPACE>       | play/pause                |
-| <N>           | Next track                |
-| <P>           | Previous track            |
-| <ARROW_RIGHT> | Seek forward by seconds   |
-| <ARROW_LEFT>  | Seek backwards by seconds |
+| Key         | Action                    |
+| ---         | ---                       |
+| SPACE       | play/pause                |
+| N           | Next track                |
+| P           | Previous track            |
+| ARROW_RIGHT | Seek forward by seconds   |
+| ARROW_LEFT  | Seek backwards by seconds |
 
 
