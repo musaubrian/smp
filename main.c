@@ -124,7 +124,7 @@ int main(void) {
 
     // Load font and setup text
     SetTextLineSpacing(LINE_SPACE);
-    Font spaceMono = LoadFontEx("./fonts/SpaceMono-Regular.ttf", FONT_SIZE*2, 0, 250);
+    Font spaceMono = LoadFontEx("fonts/SpaceMono-Regular.ttf", FONT_SIZE*2, 0, 250);
 
     // Check directory and load files
     if(!DirectoryExists(toMusic)) {
@@ -150,8 +150,8 @@ int main(void) {
     };
 
 
-    int activeTrack = 0;
-    Music audio = LoadMusicStream(files.paths[activeTrack]);
+    int currentTrack = 0;
+    Music audio = LoadMusicStream(files.paths[currentTrack]);
     bool pause = true;
 
     while (!WindowShouldClose()) {
@@ -176,28 +176,28 @@ int main(void) {
         }
 
         if (IsKeyPressed(KEY_N)) {
-            if ((unsigned int)(activeTrack + 1) < files.count) {
-                activeTrack += 1;
+            if ((unsigned int)(currentTrack + 1) < files.count) {
+                currentTrack += 1;
             } else {
                 // Loop around if at the end
-                activeTrack = 0;
+                currentTrack = 0;
             }
 
             UnloadMusicStream(audio);
-            audio = LoadMusicStream(files.paths[activeTrack]);
-            PlayMusicStream(audio);
+            audio = LoadMusicStream(files.paths[currentTrack]);
+            if (!pause) PlayMusicStream(audio);
         }
 
         if (IsKeyPressed(KEY_P)) {
-            if (activeTrack <= 0) {
-                activeTrack = files.count - 1;
+            if (currentTrack <= 0) {
+                currentTrack = files.count - 1;
             } else {
-                activeTrack -= 1;
+                currentTrack -= 1;
             }
 
             UnloadMusicStream(audio);
-            audio = LoadMusicStream(files.paths[activeTrack]);
-            PlayMusicStream(audio);
+            audio = LoadMusicStream(files.paths[currentTrack]);
+            if (!pause) PlayMusicStream(audio);
         }
 
         BeginDrawing();
@@ -206,12 +206,12 @@ int main(void) {
         DrawFPS(GetScreenWidth()-100, 10);
 
         DrawRectangleRounded(fileList.bounds, RADIUS/2, 10, DARKGRAY);
-        DrawFileList(&fileList, files, spaceMono);
+        DrawFileList(&fileList, files, spaceMono, currentTrack);
 
         if (!pause) {
             DrawTextEx(
                 spaceMono,
-                "Playing",
+                joinStr("Playing: ", basename(files.paths[currentTrack])),
                 (Vector2){50, (float)GetScreenHeight()-100},
                 FONT_SIZE,
                 2,
@@ -220,7 +220,7 @@ int main(void) {
         } else {
             DrawTextEx(
                 spaceMono,
-                "Paused",
+                joinStr("Paused: ", basename(files.paths[currentTrack])),
                 (Vector2){50, (float)GetScreenHeight()-100},
                 FONT_SIZE,
                 2,
@@ -238,19 +238,19 @@ int main(void) {
 
         if(IsKeyPressed(KEY_LEFT)) {
             float pos = timeAudioPlayed - SEEK_SKIP;
-            if (pos < 0) pos = 0;
+            if (pos < 0) pos = timeAudioPlayed;
             SeekMusicStream(audio, pos);
         }
 
         if (totalAudioTime - timeAudioPlayed <= 0.1) {
-            if ((unsigned int)(activeTrack + 1) < files.count) {
-                activeTrack += 1;
+            if ((unsigned int)(currentTrack + 1) < files.count) {
+                currentTrack += 1;
             } else {
-                activeTrack = 0;
+                currentTrack = 0;
             }
 
             UnloadMusicStream(audio);
-            audio = LoadMusicStream(files.paths[activeTrack]);
+            audio = LoadMusicStream(files.paths[currentTrack]);
             PlayMusicStream(audio);
         }
 
