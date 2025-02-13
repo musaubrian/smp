@@ -27,12 +27,12 @@ We make alot of assumptions:
 
 ## Controls
 
-| Key         | Action                    |
-| ---         | ---                       |
-| SPACE       | play/pause                |
-| N           | Next track                |
-| P           | Previous track            |
-| ARROW_RIGHT | Seek forward by seconds   |
-| ARROW_LEFT  | Seek backwards by seconds |
+| Key         | Action                       |
+| ---         | ---                          |
+| SPACE       | play/pause                   |
+| N           | Next track                   |
+| P           | Previous track               |
+| ARROW_RIGHT | Seek forward by 10 seconds   |
+| ARROW_LEFT  | Seek backwards by 10 seconds |
 
 
