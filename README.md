@@ -1,8 +1,8 @@
 # SMP
 
 Simple Music Player
-
-This is my attempt at a music player.
+This is my attempt at a music player that does that and only that
+play music.
 
 ## TODO:
 - [x] Quit the window
@@ -10,7 +10,30 @@ This is my attempt at a music player.
 - [x] Load music
 - [x] Play Music
 - [x] Keybinds for next/prev play/pause
-- [x] Seek
+- [x] Seek forwards/back
 - [ ] Cosmetic things
 
 Lets see how far we can get
+Seems we've gotten quite far.
+
+We make alot of assumptions:
+- You are on a `*nix` system.
+- Your Music is n `~/Music`
+- Most of your audio is in raylibs supported format:
+    - wav
+    - mp3
+    - ogg
+> Flac needs raylib built to support it, didn't do that
+- You are comfortable with the keyboard.
+
+## Controls
+
+| Key           | Action                    |
+| ---           | ---                       |
+| <SPACE>       | play/pause                |
+| <N>           | Next track                |
+| <P>           | Previous track            |
+| <ARROW_RIGHT> | Seek forward by seconds   |
+| <ARROW_LEFT>  | Seek backwards by seconds |
+
+
