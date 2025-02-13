@@ -132,17 +132,15 @@ int main(void) {
         return 1;
     }
 
-    // Load font and setup text
     SetTextLineSpacing(LINE_SPACE);
     Font spaceMono = LoadFontEx("fonts/SpaceMono-Regular.ttf", FONT_SIZE*2, 0, 250);
 
-    // Check directory and load files
     if(!DirectoryExists(toMusic)) {
         fprintf(stderr, "Failed to load directory %s", toMusic);
         return 1;
     }
-    FilePathList files = LoadDirectoryFiles(toMusic);
 
+    FilePathList files = LoadDirectoryFilesEx(toMusic, ".wav;.ogg;.mp3", true);
     // Initialize scrollable container
     ScrollableContainer fileList = {
         .scrollOffset = 0,
@@ -189,7 +187,6 @@ int main(void) {
             if ((unsigned int)(currentTrack + 1) < files.count) {
                 currentTrack += 1;
             } else {
-                // Loop around if at the end
                 currentTrack = 0;
             }
 
