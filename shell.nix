@@ -1,11 +1,8 @@
-{
-  pkgs ? import <nixpkgs> {},
-  unstable ? import (fetchTarball "https://github.com/nixos/nixpkgs/archive/nixos-unstable.tar.gz") {},
-}:
+{pkgs ? import <nixpkgs> {}}:
 pkgs.mkShell {
   buildInputs = with pkgs; [
     gcc
-    unstable.raylib
+    raylib
     wayland
     wayland-protocols
     libGL
