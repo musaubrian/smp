@@ -2,6 +2,8 @@
 #include <raylib.h>
 #include <stdlib.h>
 #include <libgen.h>
+#include <stdint.h>
+#include <string.h>
 
 #define WIDTH 1080
 #define HEIGHT 720
@@ -12,11 +14,6 @@
 #define LINE_SPACE 20
 #define SEEK_SKIP 10 //How many seconds ahead/behind to seek
 
-typedef struct {
-    float scrollOffset;
-    Rectangle bounds;
-    Rectangle content;
-} ScrollableContainer;
 
 char* joinStr(const char* base, const char* end) {
     static char path[256];
@@ -24,70 +21,6 @@ char* joinStr(const char* base, const char* end) {
         return NULL;
     }
     return path;
-}
-
-
-// Scroll container update logic
-void UpdateScrollableContainer(ScrollableContainer* container) {
-    float maxScroll = container->content.height - container->bounds.height + 1.5*PADDING;
-    float wheel = GetMouseWheelMove();
-
-    if (wheel != 0 && CheckCollisionPointRec(GetMousePosition(), container->bounds)) {
-        container->scrollOffset += wheel * 20;
-        if (container->scrollOffset > 0) container->scrollOffset = 0;
-        if (container->scrollOffset < -maxScroll) container->scrollOffset = -maxScroll;
-    }
-}
-
-// File list drawing function
-void DrawFileList(ScrollableContainer* container, FilePathList files, Font font, unsigned int currentTrack) {
-    BeginScissorMode(container->bounds.x, container->bounds.y,
-                     container->bounds.width, container->bounds.height);
-
-    float currentY = container->bounds.y + container->scrollOffset;
-
-    for (unsigned int i = 0; i < files.count; ++i) {
-        if (i == currentTrack) {
-            DrawTextEx(font,
-               GetFileName(files.paths[i]),
-               (Vector2){ container->bounds.x + PADDING, currentY + PADDING },
-               FONT_SIZE,
-               2,
-               BLUE);
-        } else {
-            DrawTextEx(font,
-               GetFileName(files.paths[i]),
-               (Vector2){ container->bounds.x + PADDING, currentY + PADDING },
-               FONT_SIZE,
-               2,
-               RAYWHITE);
-        }
-
-        currentY += FONT_SIZE + LINE_SPACE;
-    }
-
-    EndScissorMode();
-
-    // Update content height for scrolling
-    container->content.height = currentY - container->bounds.y;
-
-    // Scroll Indicator
-    if (container->content.height > container->bounds.height) {
-        float scrollBarHeight = (container->bounds.height / container->content.height) * container->bounds.height;
-        float scrollBarY = container->bounds.y - (container->scrollOffset / container->content.height) * container->bounds.height;
-
-        DrawRectangleRounded(
-            (Rectangle){
-                container->bounds.x + container->bounds.width - 10,
-                scrollBarY,
-                5,
-                scrollBarHeight
-            },
-            1.0,
-            4,
-            LIGHTGRAY
-        );
-    }
 }
 
 void DrawProgressBar(int screenHeight, int screenWidth, float currentTime, float totalTime) {
@@ -117,6 +50,113 @@ void DrawProgressBar(int screenHeight, int screenWidth, float currentTime, float
     );
 }
 
+// Implementation was taken from musializer github.com/tsoding/musializer
+void DrawTrackList(FilePathList tracks,Font font, unsigned int activeTrack, Rectangle panel_boundary) {
+    DrawRectangleRounded(panel_boundary, RADIUS/3, 10, DARKGRAY);
+
+    Vector2 mouse = GetMousePosition();
+
+    float scroll_bar_width = panel_boundary.width*0.01;
+    float item_size = panel_boundary.width*0.07;
+
+    float visible_area_size = panel_boundary.height;
+    float entire_scrollable_area = item_size*tracks.count;
+
+    static float panel_scroll = 0;
+    static float panel_velocity = 0;
+    panel_velocity *= 0.9;
+    if (CheckCollisionPointRec(mouse, panel_boundary)) {
+        panel_velocity += GetMouseWheelMove()*item_size*8;
+    }
+    panel_scroll -= panel_velocity*GetFrameTime();
+
+    static bool scrolling = false;
+    static float scrolling_mouse_offset = 0.0f;
+    if (scrolling) {
+        panel_scroll = (mouse.y - panel_boundary.y - scrolling_mouse_offset)/visible_area_size*entire_scrollable_area;
+    }
+
+    float min_scroll = 0;
+    if (panel_scroll < min_scroll) panel_scroll = min_scroll;
+    float max_scroll = entire_scrollable_area - visible_area_size;
+    if (max_scroll < 0) max_scroll = 0;
+    if (panel_scroll > max_scroll) panel_scroll = max_scroll;
+    float panel_padding = item_size*0.1;
+
+
+    BeginScissorMode(panel_boundary.x, panel_boundary.y, panel_boundary.width, panel_boundary.height);
+    for (unsigned int i = 0; i < tracks.count; ++i) {
+        Rectangle item_boundary = {
+            .x = panel_boundary.x + panel_padding,
+            .y = i*item_size + panel_boundary.y + panel_padding - panel_scroll,
+            .width = panel_boundary.width - panel_padding*2 - scroll_bar_width,
+            .height = item_size - panel_padding*2,
+        };
+        Color color;
+        if (i == activeTrack) {
+            color = BLUE;
+        } else {
+            color = GRAY;
+        }
+        DrawRectangleRounded(item_boundary,RADIUS*5, 10, color);
+
+        const char *text = GetFileName(tracks.paths[i]);
+        float fontSize = item_boundary.height*0.5;
+        float text_padding = PADDING;
+
+        Vector2 size = MeasureTextEx(font, text, fontSize, 0);
+        Vector2 position = {
+            .x = item_boundary.x + text_padding,
+            .y = item_boundary.y + item_boundary.height*0.5 - size.y*0.5,
+        };
+
+        DrawTextEx(font, text, position, fontSize, 0, WHITE);
+    }
+
+
+    if (entire_scrollable_area > visible_area_size) { // Is scrolling needed
+        float t = visible_area_size/entire_scrollable_area;
+        float q = panel_scroll/entire_scrollable_area;
+        Rectangle scroll_bar_area = {
+            .x = panel_boundary.x + panel_boundary.width - scroll_bar_width,
+            .y = panel_boundary.y,
+            .width = scroll_bar_width,
+            .height = panel_boundary.height,
+        };
+        Rectangle scroll_bar_boundary = {
+            .x = panel_boundary.x + panel_boundary.width - scroll_bar_width - 2,
+            .y = panel_boundary.y + panel_boundary.height*q,
+            .width = scroll_bar_width,
+            .height = panel_boundary.height*t,
+        };
+        DrawRectangleRounded(scroll_bar_boundary, RADIUS*100, 20, RAYWHITE);
+
+        if (scrolling) {
+            if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+                scrolling = false;
+            }
+        } else {
+            if (CheckCollisionPointRec(mouse, scroll_bar_boundary)) {
+                if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    scrolling = true;
+                    scrolling_mouse_offset = mouse.y - scroll_bar_boundary.y;
+                }
+            } else if (CheckCollisionPointRec(mouse, scroll_bar_area)) {
+                if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+                    if (mouse.y < scroll_bar_boundary.y) {
+                        panel_velocity += item_size*16;
+                    } else if (scroll_bar_boundary.y + scroll_bar_boundary.height < mouse.y){
+                        panel_velocity += -item_size*16;
+                    }
+                }
+            }
+        }
+    }
+
+    EndScissorMode();
+}
+
+
 int main(void) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     SetTargetFPS(60);
@@ -141,36 +181,13 @@ int main(void) {
     }
 
     FilePathList files = LoadDirectoryFilesEx(toMusic, ".wav;.ogg;.mp3", true);
-    // Initialize scrollable container
-    ScrollableContainer fileList = {
-        .scrollOffset = 0,
-        .bounds = (Rectangle) {
-            50, 50,
-            GetScreenWidth() - 100,
-            GetScreenHeight() - 200,
-        },
-        .content = (Rectangle){
-            50,
-            50,
-            GetScreenWidth() - 100,
-            0
-        }
-    };
-
 
     int currentTrack = 0;
     Music audio = LoadMusicStream(files.paths[currentTrack]);
     bool pause = true;
 
     while (!WindowShouldClose()) {
-        fileList.bounds = (Rectangle){
-            50,
-            50,
-            GetScreenWidth() - 100,
-            GetScreenHeight() - 200
-        };
 
-        UpdateScrollableContainer(&fileList);
         UpdateMusicStream(audio);
 
         // Exit on CTRL+Q
@@ -212,8 +229,13 @@ int main(void) {
 
         DrawFPS(GetScreenWidth()-100, 10);
 
-        DrawRectangleRounded(fileList.bounds, RADIUS/2, 10, DARKGRAY);
-        DrawFileList(&fileList, files, spaceMono, currentTrack);
+        Rectangle trackListBounds = (Rectangle){
+            50,
+            50,
+            GetScreenWidth() - 100,
+            GetScreenHeight() - 200
+        };
+        DrawTrackList(files,spaceMono, currentTrack, trackListBounds);
 
         if (!pause) {
             DrawTextEx(
@@ -273,3 +295,4 @@ int main(void) {
 
     return 0;
 }
+
