@@ -15,10 +15,10 @@ This is my attempt at a music player that does that and only that.
 Lets see how far we can get
 Seems we've gotten quite far.
 
-We make alot of assumptions:
+I make alot of assumptions:
 - You are on a `*nix` system.
 - Your Music is n `~/Music`
-- Most of your audio is in raylibs supported format:
+- Most of your audio is in raylib's supported format:
     - wav
     - mp3
     - ogg
@@ -36,3 +36,4 @@ We make alot of assumptions:
 | ARROW_LEFT  | Seek backwards by 10 seconds |
 
 
+![smp](media/smp.png)
