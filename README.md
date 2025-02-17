@@ -17,7 +17,7 @@ Seems we've gotten quite far.
 
 I make alot of assumptions:
 - You are on a `*nix` system.
-- Your Music is n `~/Music`
+- Your Music is n `$HOME/Music`
 - Most of your audio is in raylib's supported format:
     - wav
     - mp3

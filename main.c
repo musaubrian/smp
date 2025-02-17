@@ -15,6 +15,7 @@
 #define SEEK_SKIP 10 //How many seconds ahead/behind to seek
 
 
+// TODO: probably handle this better instead of like paths
 char* joinStr(const char* base, const char* end) {
     static char path[256];
     if (snprintf(path, sizeof(path), "%s%s", base, end) < 1) {
