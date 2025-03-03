@@ -1,6 +1,6 @@
 # gcc -o main main.c
 CC=gcc
-CFlags=-Wall -Wextra
+CFlags=-Wall -Wextra -pedantic
 # CLibs= -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 -lwayland-client -lxkbcommon
 CLibs= -lraylib -lGL -lm -lpthread -ldl -lrt
 BIN=./bin/smp
