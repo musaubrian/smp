@@ -10,6 +10,7 @@ This is my attempt at a music player that does that and only that.
 - [x] Play Music
 - [x] Keybinds for next/prev play/pause
 - [x] Seek forwards/back
+- [x] Shuffle
 - [ ] Cosmetic things
 
 Lets see how far we can get
@@ -32,6 +33,7 @@ I make alot of assumptions:
 | SPACE       | play/pause                   |
 | N           | Next track                   |
 | P           | Previous track               |
+| S           | Toggle Shuffle               |
 | ARROW_RIGHT | Seek forward by 10 seconds   |
 | ARROW_LEFT  | Seek backwards by 10 seconds |
 
