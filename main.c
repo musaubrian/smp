@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include <raylib.h>
 #include <stdlib.h>
 #include <libgen.h>
@@ -16,7 +17,7 @@
 
 
 // TODO: probably handle this better instead of like paths
-char* joinStr(const char* base, const char* end) {
+char *joinStr(const char *base, const char *end) {
     static char path[256];
     if (snprintf(path, sizeof(path), "%s%s", base, end) < 1) {
         return NULL;
@@ -24,31 +25,49 @@ char* joinStr(const char* base, const char* end) {
     return path;
 }
 
+int get_unique_random(int prev_val, int max_val)
+{
+    int new_rand_val;
+
+    do {
+        new_rand_val = random() % max_val;
+    } while (new_rand_val == prev_val);
+
+    return new_rand_val;
+}
+
+int shuffle_track(int currentTrack, int totalTracks, char *opt)
+{
+    if (strcmp(opt,"prev"))
+    {
+        return get_unique_random(currentTrack, totalTracks);
+    }
+    if (strcmp(opt,"next"))
+    {
+        return get_unique_random(currentTrack, totalTracks);
+    }
+    return -1;
+}
+
 void DrawProgressBar(int screenHeight, int screenWidth, float currentTime, float totalTime) {
     float barWidth = screenWidth - 100;
-    DrawRectangleRounded(
-        (Rectangle){
-            50,
-            screenHeight - 50,
-            barWidth,
-            SEEK_HEIGHT,
-        },
-        RADIUS*100,
-        10,
-        DARKGRAY
-    );
+    Rectangle seek_track_background = {
+        .x = 50,
+        .y = screenHeight - 50,
+        .width = barWidth,
+        .height = SEEK_HEIGHT
+    };
 
-    DrawRectangleRounded(
-        (Rectangle){
-            50,
-            screenHeight - 50,
-            (currentTime / totalTime) * barWidth,
-            SEEK_HEIGHT,
-        },
-        RADIUS*100,
-        10,
-        LIGHTGRAY
-    );
+    DrawRectangleRounded(seek_track_background, RADIUS*100, 10, DARKGRAY);
+
+    Rectangle seek_track_active = {
+        .x = 50,
+        .y = screenHeight - 50,
+        .width = (currentTime / totalTime) * barWidth,
+        .height = SEEK_HEIGHT,
+    };
+
+    DrawRectangleRounded(seek_track_active, RADIUS*100, 10, LIGHTGRAY);
 }
 
 // Implementation was taken from musializer github.com/tsoding/musializer
@@ -99,7 +118,7 @@ void DrawTrackList(FilePathList tracks,Font font, unsigned int activeTrack, Rect
         } else {
             color = GRAY;
         }
-        DrawRectangleRounded(item_boundary,RADIUS*5, 10, color);
+        DrawRectangleRounded(item_boundary, RADIUS*5, 10, color);
 
         const char *text = GetFileName(tracks.paths[i]);
         float fontSize = item_boundary.height*0.5;
@@ -159,15 +178,16 @@ void DrawTrackList(FilePathList tracks,Font font, unsigned int activeTrack, Rect
 
 
 int main(void) {
+    srandom(time(NULL));
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     SetTargetFPS(60);
 
     InitWindow(WIDTH, HEIGHT, "Simple Music Player");
     InitAudioDevice();
 
-    char* home = getenv("HOME");
-    char* musicDir = "/Music";
-    char* toMusic = joinStr(home, musicDir);
+    char *home = getenv("HOME");
+    char *musicDir = "/Music";
+    char *toMusic = joinStr(home, musicDir);
     if (toMusic == NULL) {
         fprintf(stderr, "Failed to create music path\n");
         return 1;
@@ -183,6 +203,7 @@ int main(void) {
 
     FilePathList files = LoadDirectoryFilesEx(toMusic, ".wav;.ogg;.mp3", true);
 
+    int enableShuffle = false;
     int currentTrack = 0;
     Music audio = LoadMusicStream(files.paths[currentTrack]);
     bool pause = true;
@@ -193,6 +214,10 @@ int main(void) {
 
         // Exit on CTRL+Q
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_Q)) break;
+        if (IsKeyPressed(KEY_S))
+        {
+            enableShuffle = !enableShuffle;
+        }
 
         if (IsKeyPressed(KEY_SPACE)) {
             pause = !pause;
@@ -202,6 +227,15 @@ int main(void) {
         }
 
         if (IsKeyPressed(KEY_N)) {
+            if (enableShuffle)
+            {
+                int newTrack = shuffle_track(currentTrack, files.count, "next");
+                if (newTrack == -1)
+                {
+                    fprintf(stderr, "invalid argument, expected [next/prev]");
+                }
+                currentTrack = newTrack;
+            }
             if ((unsigned int)(currentTrack + 1) < files.count) {
                 currentTrack += 1;
             } else {
@@ -214,6 +248,15 @@ int main(void) {
         }
 
         if (IsKeyPressed(KEY_P)) {
+            if (enableShuffle)
+            {
+                int newTrack = shuffle_track(currentTrack, files.count, "prev");
+                if (newTrack == -1)
+                {
+                    fprintf(stderr, "invalid argument, expected [next/prev]");
+                }
+                currentTrack = newTrack;
+            }
             if (currentTrack <= 0) {
                 currentTrack = files.count - 1;
             } else {
@@ -230,13 +273,24 @@ int main(void) {
 
         DrawFPS(GetScreenWidth()-100, 10);
 
-        Rectangle trackListBounds = (Rectangle){
-            50,
-            50,
-            GetScreenWidth() - 100,
-            GetScreenHeight() - 200
+        Rectangle trackListBounds = {
+           .x = 50,
+           .y = 50,
+           .width = GetScreenWidth() - 100,
+           .height = GetScreenHeight() - 200
         };
         DrawTrackList(files,spaceMono, currentTrack, trackListBounds);
+        if (enableShuffle)
+        {
+            DrawTextEx(
+                spaceMono,
+                "Shuffle ON",
+                (Vector2){50, (float)GetScreenHeight()-130},
+                FONT_SIZE,
+                2,
+                RAYWHITE
+            );
+        }
 
         if (!pause) {
             DrawTextEx(
@@ -284,7 +338,7 @@ int main(void) {
             PlayMusicStream(audio);
         }
 
-        DrawProgressBar(GetScreenHeight(), GetScreenWidth(),timeAudioPlayed,totalAudioTime);
+        DrawProgressBar(GetScreenHeight(), GetScreenWidth(), timeAudioPlayed, totalAudioTime);
         EndDrawing();
     }
 
