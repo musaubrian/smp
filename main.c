@@ -16,8 +16,189 @@
 #define SEEK_SKIP 10 //How many seconds ahead/behind to seek
 
 
+char *joinStr(const char *base, const char *end);
+int get_unique_random(int prev_val, int max_val);
+int shuffle_track(int currentTrack, int totalTracks, char *opt);
+void DrawProgressBar(int screenHeight, int screenWidth, float currentTime, float totalTime);
+void DrawTrackList(FilePathList tracks,Font font, unsigned int activeTrack, Rectangle panel_boundary);
+
+
+int main(void) {
+    srandom(time(NULL));
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetTargetFPS(60);
+
+    InitWindow(WIDTH, HEIGHT, "Simple Music Player");
+    InitAudioDevice();
+
+    char *home = getenv("HOME");
+    char *musicDir = "/Music";
+    char *toMusic = joinStr(home, musicDir);
+    if (toMusic == NULL) {
+        fprintf(stderr, "Failed to create music path\n");
+        return 1;
+    }
+
+    SetTextLineSpacing(LINE_SPACE);
+    Font spaceMono = LoadFontEx("fonts/SpaceMono-Regular.ttf", FONT_SIZE*2, 0, 250);
+
+    if(!DirectoryExists(toMusic)) {
+        fprintf(stderr, "Failed to load directory %s", toMusic);
+        return 1;
+    }
+
+    FilePathList files = LoadDirectoryFilesEx(toMusic, ".wav;.ogg;.mp3", true);
+
+    int enableShuffle = false;
+    int currentTrack = 0;
+    Music audio = LoadMusicStream(files.paths[currentTrack]);
+    bool pause = true;
+
+    while (!WindowShouldClose()) {
+
+        UpdateMusicStream(audio);
+
+        // Exit on CTRL+Q
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_Q)) break;
+        if (IsKeyPressed(KEY_S))
+        {
+            enableShuffle = !enableShuffle;
+        }
+
+        if (IsKeyPressed(KEY_SPACE)) {
+            pause = !pause;
+
+            if (pause) PauseMusicStream(audio);
+            else PlayMusicStream(audio);
+        }
+
+        if (IsKeyPressed(KEY_N)) {
+            if (enableShuffle)
+            {
+                int newTrack = shuffle_track(currentTrack, files.count, "next");
+                if (newTrack == -1)
+                {
+                    fprintf(stderr, "invalid argument, expected [next/prev]");
+                }
+                currentTrack = newTrack;
+            }
+            if ((unsigned int)(currentTrack + 1) < files.count) {
+                currentTrack += 1;
+            } else {
+                currentTrack = 0;
+            }
+
+            UnloadMusicStream(audio);
+            audio = LoadMusicStream(files.paths[currentTrack]);
+            if (!pause) PlayMusicStream(audio);
+        }
+
+        if (IsKeyPressed(KEY_P)) {
+            if (enableShuffle)
+            {
+                int newTrack = shuffle_track(currentTrack, files.count, "prev");
+                if (newTrack == -1)
+                {
+                    fprintf(stderr, "invalid argument, expected [next/prev]");
+                }
+                currentTrack = newTrack;
+            }
+            if (currentTrack <= 0) {
+                currentTrack = files.count - 1;
+            } else {
+                currentTrack -= 1;
+            }
+
+            UnloadMusicStream(audio);
+            audio = LoadMusicStream(files.paths[currentTrack]);
+            if (!pause) PlayMusicStream(audio);
+        }
+
+        BeginDrawing();
+        ClearBackground(CLITERAL(Color){ 23, 23, 23, 255 });
+
+
+        Rectangle trackListBounds = {
+           .x = 50,
+           .y = 50,
+           .width = GetScreenWidth() - 100,
+           .height = GetScreenHeight() - 200
+        };
+        DrawTrackList(files,spaceMono, currentTrack, trackListBounds);
+        if (enableShuffle) {
+            DrawTextEx(
+                spaceMono,
+                "Shuffle ON",
+                (Vector2){50, (float)GetScreenHeight()-130},
+                FONT_SIZE,
+                2,
+                RAYWHITE
+            );
+        }
+
+        if (!pause) {
+            DrawTextEx(
+                spaceMono,
+                joinStr("Playing: ", basename(files.paths[currentTrack])),
+                (Vector2){50, (float)GetScreenHeight()-100},
+                FONT_SIZE,
+                2,
+                RAYWHITE
+            );
+        } else {
+            DrawTextEx(
+                spaceMono,
+                joinStr("Paused: ", basename(files.paths[currentTrack])),
+                (Vector2){50, (float)GetScreenHeight()-100},
+                FONT_SIZE,
+                2,
+                RAYWHITE
+            );
+
+        }
+        float timeAudioPlayed = GetMusicTimePlayed(audio);
+        float totalAudioTime = GetMusicTimeLength(audio);
+        if(IsKeyPressed(KEY_RIGHT)) {
+            float pos = SEEK_SKIP + timeAudioPlayed;
+            if (pos > totalAudioTime) pos = totalAudioTime;
+            SeekMusicStream(audio, pos);
+        }
+
+        if(IsKeyPressed(KEY_LEFT)) {
+            float pos = timeAudioPlayed - SEEK_SKIP;
+            if (pos < 0) pos = timeAudioPlayed;
+            SeekMusicStream(audio, pos);
+        }
+
+        if (totalAudioTime - timeAudioPlayed <= 0.1) {
+            if ((unsigned int)(currentTrack + 1) < files.count) {
+                currentTrack += 1;
+            } else {
+                currentTrack = 0;
+            }
+
+            UnloadMusicStream(audio);
+            audio = LoadMusicStream(files.paths[currentTrack]);
+            PlayMusicStream(audio);
+        }
+
+        DrawProgressBar(GetScreenHeight(), GetScreenWidth(), timeAudioPlayed, totalAudioTime);
+        EndDrawing();
+    }
+
+    UnloadMusicStream(audio);
+    UnloadFont(spaceMono);
+    UnloadDirectoryFiles(files);
+    CloseAudioDevice();
+    CloseWindow();
+
+    return 0;
+}
+
+
 // TODO: probably handle this better instead of like paths
-char *joinStr(const char *base, const char *end) {
+char *joinStr(const char *base, const char *end)
+{
     static char path[256];
     if (snprintf(path, sizeof(path), "%s%s", base, end) < 1) {
         return NULL;
@@ -49,7 +230,8 @@ int shuffle_track(int currentTrack, int totalTracks, char *opt)
     return -1;
 }
 
-void DrawProgressBar(int screenHeight, int screenWidth, float currentTime, float totalTime) {
+void DrawProgressBar(int screenHeight, int screenWidth, float currentTime, float totalTime)
+{
     float barWidth = screenWidth - 100;
     Rectangle seek_track_background = {
         .x = 50,
@@ -71,7 +253,8 @@ void DrawProgressBar(int screenHeight, int screenWidth, float currentTime, float
 }
 
 // Implementation was taken from musializer github.com/tsoding/musializer
-void DrawTrackList(FilePathList tracks,Font font, unsigned int activeTrack, Rectangle panel_boundary) {
+void DrawTrackList(FilePathList tracks,Font font, unsigned int activeTrack, Rectangle panel_boundary)
+{
     DrawRectangleRounded(panel_boundary, RADIUS/3, 10, DARKGRAY);
 
     Vector2 mouse = GetMousePosition();
@@ -175,179 +358,3 @@ void DrawTrackList(FilePathList tracks,Font font, unsigned int activeTrack, Rect
 
     EndScissorMode();
 }
-
-
-int main(void) {
-    srandom(time(NULL));
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    SetTargetFPS(60);
-
-    InitWindow(WIDTH, HEIGHT, "Simple Music Player");
-    InitAudioDevice();
-
-    char *home = getenv("HOME");
-    char *musicDir = "/Music";
-    char *toMusic = joinStr(home, musicDir);
-    if (toMusic == NULL) {
-        fprintf(stderr, "Failed to create music path\n");
-        return 1;
-    }
-
-    SetTextLineSpacing(LINE_SPACE);
-    Font spaceMono = LoadFontEx("fonts/SpaceMono-Regular.ttf", FONT_SIZE*2, 0, 250);
-
-    if(!DirectoryExists(toMusic)) {
-        fprintf(stderr, "Failed to load directory %s", toMusic);
-        return 1;
-    }
-
-    FilePathList files = LoadDirectoryFilesEx(toMusic, ".wav;.ogg;.mp3", true);
-
-    int enableShuffle = false;
-    int currentTrack = 0;
-    Music audio = LoadMusicStream(files.paths[currentTrack]);
-    bool pause = true;
-
-    while (!WindowShouldClose()) {
-
-        UpdateMusicStream(audio);
-
-        // Exit on CTRL+Q
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_Q)) break;
-        if (IsKeyPressed(KEY_S))
-        {
-            enableShuffle = !enableShuffle;
-        }
-
-        if (IsKeyPressed(KEY_SPACE)) {
-            pause = !pause;
-
-            if (pause) PauseMusicStream(audio);
-            else PlayMusicStream(audio);
-        }
-
-        if (IsKeyPressed(KEY_N)) {
-            if (enableShuffle)
-            {
-                int newTrack = shuffle_track(currentTrack, files.count, "next");
-                if (newTrack == -1)
-                {
-                    fprintf(stderr, "invalid argument, expected [next/prev]");
-                }
-                currentTrack = newTrack;
-            }
-            if ((unsigned int)(currentTrack + 1) < files.count) {
-                currentTrack += 1;
-            } else {
-                currentTrack = 0;
-            }
-
-            UnloadMusicStream(audio);
-            audio = LoadMusicStream(files.paths[currentTrack]);
-            if (!pause) PlayMusicStream(audio);
-        }
-
-        if (IsKeyPressed(KEY_P)) {
-            if (enableShuffle)
-            {
-                int newTrack = shuffle_track(currentTrack, files.count, "prev");
-                if (newTrack == -1)
-                {
-                    fprintf(stderr, "invalid argument, expected [next/prev]");
-                }
-                currentTrack = newTrack;
-            }
-            if (currentTrack <= 0) {
-                currentTrack = files.count - 1;
-            } else {
-                currentTrack -= 1;
-            }
-
-            UnloadMusicStream(audio);
-            audio = LoadMusicStream(files.paths[currentTrack]);
-            if (!pause) PlayMusicStream(audio);
-        }
-
-        BeginDrawing();
-        ClearBackground(CLITERAL(Color){ 23, 23, 23, 255 });
-
-        DrawFPS(GetScreenWidth()-100, 10);
-
-        Rectangle trackListBounds = {
-           .x = 50,
-           .y = 50,
-           .width = GetScreenWidth() - 100,
-           .height = GetScreenHeight() - 200
-        };
-        DrawTrackList(files,spaceMono, currentTrack, trackListBounds);
-        if (enableShuffle)
-        {
-            DrawTextEx(
-                spaceMono,
-                "Shuffle ON",
-                (Vector2){50, (float)GetScreenHeight()-130},
-                FONT_SIZE,
-                2,
-                RAYWHITE
-            );
-        }
-
-        if (!pause) {
-            DrawTextEx(
-                spaceMono,
-                joinStr("Playing: ", basename(files.paths[currentTrack])),
-                (Vector2){50, (float)GetScreenHeight()-100},
-                FONT_SIZE,
-                2,
-                RAYWHITE
-            );
-        } else {
-            DrawTextEx(
-                spaceMono,
-                joinStr("Paused: ", basename(files.paths[currentTrack])),
-                (Vector2){50, (float)GetScreenHeight()-100},
-                FONT_SIZE,
-                2,
-                RAYWHITE
-            );
-
-        }
-        float timeAudioPlayed = GetMusicTimePlayed(audio);
-        float totalAudioTime = GetMusicTimeLength(audio);
-        if(IsKeyPressed(KEY_RIGHT)) {
-            float pos = SEEK_SKIP + timeAudioPlayed;
-            if (pos > totalAudioTime) pos = totalAudioTime;
-            SeekMusicStream(audio, pos);
-        }
-
-        if(IsKeyPressed(KEY_LEFT)) {
-            float pos = timeAudioPlayed - SEEK_SKIP;
-            if (pos < 0) pos = timeAudioPlayed;
-            SeekMusicStream(audio, pos);
-        }
-
-        if (totalAudioTime - timeAudioPlayed <= 0.1) {
-            if ((unsigned int)(currentTrack + 1) < files.count) {
-                currentTrack += 1;
-            } else {
-                currentTrack = 0;
-            }
-
-            UnloadMusicStream(audio);
-            audio = LoadMusicStream(files.paths[currentTrack]);
-            PlayMusicStream(audio);
-        }
-
-        DrawProgressBar(GetScreenHeight(), GetScreenWidth(), timeAudioPlayed, totalAudioTime);
-        EndDrawing();
-    }
-
-    UnloadMusicStream(audio);
-    UnloadFont(spaceMono);
-    UnloadDirectoryFiles(files);
-    CloseAudioDevice();
-    CloseWindow();
-
-    return 0;
-}
-
