@@ -10,6 +10,7 @@ SCREEN_WIDTH      :: 1080
 SCREEN_HEIGHT     :: 720
 MOUSE_SENSITIVITY :: 60
 FONT_SIZE         :: 24
+SEEK_SKIP         :: 5 // In seconds
 
 
 FONT_DATA :: #load("./resources/fonts/JetBrainsMono-Regular.ttf")
@@ -123,6 +124,18 @@ main :: proc() {
             app.next_prev_fn(&app, direction = .Prev)
             load_new_music(&app, &audio)
             rl.PlayMusicStream(audio)
+        }
+
+        if rl.IsKeyPressed(rl.KeyboardKey.RIGHT) {
+            pos := SEEK_SKIP + app.track_time.played
+            if pos > app.track_time.total { pos = app.track_time.total }
+            rl.SeekMusicStream(audio, pos)
+        }
+
+        if rl.IsKeyPressed(rl.KeyboardKey.LEFT) {
+            pos := app.track_time.played - SEEK_SKIP
+            if pos < 0 { pos = app.track_time.played }
+            rl.SeekMusicStream(audio, pos)
         }
 
         if app.current_track != previous_track {
