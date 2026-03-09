@@ -274,7 +274,7 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
 
 
 
-    controls_height : f32 = 0.12 if render_h > 600 else 0.25
+    controls_height : f32 = 0.15 if render_h > 700 else 0.25
     controls := lx.box("controls", -1, controls_height, direction = .Col, style = { justify = .Start, gap = 5 })
 
     name_and_times := lx.box("name_and_times", -1, -1, style = { align = .Center })
