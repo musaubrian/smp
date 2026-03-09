@@ -30,13 +30,23 @@ App :: struct {
 }
 
 next_prev :: proc(app: ^App, direction: Direction) {
+    if app.repeat == .Single { return }
+
     switch direction {
     case .Prev:
         new_track := app.current_track - 1
-        app.current_track = len(app.tracks) - 1 if new_track < 0 else new_track
+        if app.repeat == .All {
+            app.current_track = len(app.tracks) - 1 if new_track < 0 else new_track
+        } else {
+            if new_track >= 0 { app.current_track = new_track }
+        }
     case .Next:
         new_track := app.current_track + 1
-        app.current_track = 0 if new_track >= len(app.tracks) else new_track
+        if app.repeat == .All {
+            app.current_track = 0 if new_track >= len(app.tracks) else new_track
+        } else {
+            if new_track < len(app.tracks) { app.current_track = new_track }
+        }
     }
 }
 
@@ -109,22 +119,25 @@ main :: proc() {
 
         rl.UpdateMusicStream(audio)
 
+        if app.playing && (app.track_time.total - app.track_time.played) <= 0.1 {
+            if app.repeat == .Single {
+                rl.StopMusicStream(audio)
+                rl.PlayMusicStream(audio)
+            } else if app.repeat == .None && app.current_track + 1 >= len(app.tracks) {
+                app.playing = false
+                rl.StopMusicStream(audio)
+            } else {
+                app.next_prev_fn(&app, direction = .Next)
+            }
+        }
+
         if rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) && rl.IsKeyPressed(rl.KeyboardKey.Q) { break }
         if rl.IsKeyPressed(rl.KeyboardKey.D)     { app.show_debug = !app.show_debug }
         if rl.IsKeyPressed(rl.KeyboardKey.S)     { app.shuffle = !app.shuffle }
         if rl.IsKeyPressed(rl.KeyboardKey.SPACE) { app.playing = !app.playing }
 
-        if rl.IsKeyPressed(rl.KeyboardKey.N) {
-            app.next_prev_fn(&app, direction = .Next)
-            load_new_music(&app, &audio)
-            rl.PlayMusicStream(audio)
-        }
-
-        if rl.IsKeyPressed(rl.KeyboardKey.P) {
-            app.next_prev_fn(&app, direction = .Prev)
-            load_new_music(&app, &audio)
-            rl.PlayMusicStream(audio)
-        }
+        if rl.IsKeyPressed(rl.KeyboardKey.N)     { app.next_prev_fn(&app, direction = .Next) }
+        if rl.IsKeyPressed(rl.KeyboardKey.P)     { app.next_prev_fn(&app, direction = .Prev) }
 
         if rl.IsKeyPressed(rl.KeyboardKey.RIGHT) {
             pos := SEEK_SKIP + app.track_time.played
@@ -143,6 +156,7 @@ main :: proc() {
             previous_track = app.current_track
             if app.playing { rl.PlayMusicStream(audio) }
         }
+
 
 
         rl.ClearBackground(rl.Color{ 23, 23, 23, 255 })
