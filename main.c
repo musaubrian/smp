@@ -40,7 +40,7 @@ int main(void) {
     }
 
     SetTextLineSpacing(LINE_SPACE);
-    Font spaceMono = LoadFontEx("fonts/SpaceMono-Regular.ttf", FONT_SIZE*2, 0, 250);
+    Font spaceMono = LoadFontEx("fonts/JetBrainsMono-Regular.ttf", FONT_SIZE*2, 0, 250);
 
     if(!DirectoryExists(toMusic)) {
         fprintf(stderr, "Failed to load directory %s", toMusic);
