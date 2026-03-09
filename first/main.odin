@@ -69,7 +69,38 @@ main :: proc() {
 	if !build_state.success {fatal(build_err)}
 	if build_err != "" {fmt.eprintln(build_err)}
 
+	when ODIN_OS == .Linux {
+		if release_mode { setup_desktop_file() }
+	}
 
+}
+
+setup_desktop_file :: proc() {
+	desktop_file := `
+[Desktop Entry]
+Name=SMP (Simple Music Player)
+Exec=smp
+Icon=<replace>
+Type=Application
+Categories=Music;
+`
+	smp_root, err := os.get_executable_directory(context.allocator)
+	if err != nil { fmt.eprintln("Failed to get smp root path") }
+
+	logo_path         := fmt.tprintf("%s/resources/logo/smp.png", smp_root)
+	desktop_file_path := fmt.tprintf("./resources/smp.desktop")
+
+	d, _ := strings.replace(desktop_file, "<replace>", logo_path, 1)
+	if os.is_file(desktop_file_path) { return }
+	f, f_err := os.open(
+		desktop_file_path,
+		{.Create, .Write},
+		{.Read_User, .Write_User, .Read_Group, .Write_Group, .Read_Other, .Write_Other},
+	)
+	defer os.close(f)
+	ensure(f_err == nil)
+	os.write(f, transmute([]u8)d)
+	fmt.eprintln("[INFO]: Created .desktop file at", desktop_file_path)
 }
 
 run_command :: proc(

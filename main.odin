@@ -12,7 +12,7 @@ MOUSE_SENSITIVITY :: 60
 FONT_SIZE         :: 24
 
 
-FONT_DATA :: #load("./fonts/JetBrainsMono-Regular.ttf")
+FONT_DATA :: #load("./resources/fonts/JetBrainsMono-Regular.ttf")
 
 Direction :: enum { Prev, Next }
 Repeat_Mode :: enum { None, Single, All }
