@@ -51,6 +51,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 bin/
+**/bin
 
 # Incase the template didn't include this for some reason
 .env
