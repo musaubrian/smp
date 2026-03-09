@@ -21,7 +21,7 @@ App :: struct {
     show_debug    : bool,
     tracks        : [dynamic]string,
     current_track : int,
-    time_played   : f32,
+    track_time    : struct { total : f32, played : f32 },
     playing       : bool,
     shuffle       : bool,
     repeat        : Repeat_Mode,
@@ -139,16 +139,7 @@ main :: proc() {
         time_played := rl.GetMusicTimePlayed(audio)
         total_time  := rl.GetMusicTimeLength(audio)
 
-        app.time_played = time_played / total_time
-
-        rl_mp := rl.GetMousePosition()
-        ctx.state.mouse_pos    = { rl_mp.x, rl_mp.y }
-        ctx.state.mouse_down   = rl.IsMouseButtonDown(rl.MouseButton.LEFT)
-        ctx.state.scroll_wheel = rl.GetMouseWheelMoveV().y * MOUSE_SENSITIVITY
-
-
-        layout := build_layout(rl.GetRenderWidth(), rl.GetRenderHeight(), &ctx, &app)
-        lx.handle_input(layout, &ctx)
+        app.track_time = { total = total_time, played = time_played }
 
         if app.playing != prev_playing {
             if app.playing {
@@ -159,6 +150,14 @@ main :: proc() {
             prev_playing = app.playing
         }
 
+        rl_mp := rl.GetMousePosition()
+        ctx.state.mouse_pos    = { rl_mp.x, rl_mp.y }
+        ctx.state.mouse_down   = rl.IsMouseButtonDown(rl.MouseButton.LEFT)
+        ctx.state.scroll_wheel = rl.GetMouseWheelMoveV().y * MOUSE_SENSITIVITY
+
+
+        layout := build_layout(rl.GetRenderWidth(), rl.GetRenderHeight(), &ctx, &app)
+        lx.handle_input(layout, &ctx)
         lx.render(layout, &ctx, proc(element: ^lx.Element, ctx: ^lx.Context) {
             switch &elem in element {
             case ^lx.Box:
@@ -241,7 +240,7 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
     track_list := lx.scroll_area("track_list", -1, -1, ctx = ctx, style = { bg = { 70, 70, 70, 150 }, gap = 7 })
     for track, index in app.tracks {
         bg := lavender_ish if app.current_track == index else lx.Color{ 120, 120, 120, 200 }
-        if lx.button(track_list, os.base(track), -1, 40, ctx = ctx, size_mode = .Mixed, justify = .Start, style = { bg = bg, round = 10 }) {
+        if lx.button(track_list, os.stem(track), -1, 40, ctx = ctx, size_mode = .Mixed, justify = .Start, style = { bg = bg, round = 10 }) {
             app.current_track = index
         }
     }
@@ -250,8 +249,17 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
 
     controls_height : f32 = 0.12 if render_h > 600 else 0.25
     controls := lx.box("controls", -1, controls_height, direction = .Col, style = { justify = .Start, gap = 5 })
-    lx.add_elements(controls, lx.text(os.base(app.tracks[app.current_track]), size = FONT_SIZE * 0.9))
-    lx.progress(controls, "track", -1, 15, app.time_played, style = { progress_color = lavender_ish })
+
+    name_and_times := lx.box("name_and_times", -1, -1, style = { align = .Center })
+    track_times := lx.box("track_times", -1, -1, style = { justify = .End, align = .Center, padding = 1 })
+    times := fmt.tprintf("%s/%s", format_seconds(int(app.track_time.played)), format_seconds(int(app.track_time.total)))
+    lx.add_elements(track_times, lx.text(times, size = FONT_SIZE * 0.9))
+    current_track := lx.text(os.base(app.tracks[app.current_track]), size = FONT_SIZE * 0.9)
+    lx.add_elements(name_and_times, current_track, track_times)
+    lx.add_elements(controls, name_and_times)
+
+    played := app.track_time.played / app.track_time.total
+    lx.progress(controls, "track", -1, 15, played, style = { progress_color = lavender_ish })
 
     actions := lx.box("actions", -1, -1, style = { align = .Center, justify = .Center, gap = 7 })
 
@@ -301,6 +309,18 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
     lx.layout(root, { 0, 0, f32(render_w), f32(render_h) }, ctx)
 
     return root
+}
+
+format_seconds :: proc(seconds: int) -> string {
+    hours   := seconds / 3600
+    minutes := (seconds % 3600) / 60
+    secs    := seconds % 60
+
+    if hours > 0 {
+        return fmt.tprintf("%02d:%02d:%02d", hours, minutes, secs)
+    }
+
+    return fmt.tprintf("%02d:%02d", minutes, secs)
 }
 
 _debug :: proc(root: ^lx.Box, ctx: ^lx.Context, app: ^App) -> ^lx.Box {
