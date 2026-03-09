@@ -13,18 +13,41 @@ This is my attempt at a music player that does that and only that.
 - [x] Shuffle
 - [ ] Cosmetic things
 
-Lets see how far we can get
-Seems we've gotten quite far.
-
 I make alot of assumptions:
-- You are on a `*nix` system.
 - Your Music is n `$HOME/Music`
 - Most of your audio is in raylib's supported format:
     - wav
     - mp3
     - ogg
-> Flac needs raylib built to support it, didn't do that
 - You are comfortable with the keyboard.
+
+## Usage
+Requirements:
+ - Odin compiler
+
+1. Bootstrap*
+```sh
+odin build first -out:first.bin
+```
+
+2. Build
+```sh
+./first.bin release
+```
+
+3. Use
+```sh
+./smp
+```
+
+or copy the generated smp.desktop from resources to `~/.local/share/applications/`
+to allow starting it from your favorite launcher
+
+3.1.
+```sh
+cp ./resources/smp.desktop ~/.local/share/application/
+```
+
 
 ## Controls
 
