@@ -12,7 +12,7 @@ This is my attempt at a music player that does that and only that.
 - [x] Seek forwards/back
 - [x] Shuffle
 - [X] Repeat(Single/All/None)
-- [ ] Cosmetic things
+- [X] Cosmetic things (These are enough)
 
 I make alot of assumptions:
 - Your Music is n `$HOME/Music`
@@ -64,3 +64,4 @@ cp ./resources/smp.desktop ~/.local/share/application/
 
 
 ![smp](media/smp.png)
+![smp smpl](media/smp-smol.png)
