@@ -253,7 +253,8 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
     icon_size : i32 : 25
     icon_container_size :: icon_size + 10
 
-    lavender_ish :: lx.Color{ 120, 120, 180, 255 }
+    lavender_ish        :: lx.Color{ 120, 120, 180, 255 }
+    inactive_icon_color :: lx.Color{ 180, 180, 180, 150 }
 
     root := lx.box("root", 1, 1, direction = .Col, style = { gap = 7 })
 
@@ -306,26 +307,28 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
     actions := lx.box("actions", -1, -1, style = { align = .Center, justify = .Center, gap = 7 })
 
 
-    shuffle_icon_color := lx.Color{ 250, 250, 250, 255 } if app.shuffle else lx.Color{ 180, 180, 180, 150 }
+    shuffle_icon_color := lx.Color{ 250, 250, 250, 255 } if app.shuffle else inactive_icon_color
     if lx.icon_button(actions, lx.ICON_SHUFFLE, f32(icon_container_size), f32(icon_container_size),
                         icon_size, ctx, style = { icon_color = shuffle_icon_color })
     {
         app.shuffle = !app.shuffle
     }
 
-    if lx.icon_button(actions, lx.ICON_SKIP_BACK, f32(icon_container_size), f32(icon_container_size), icon_size, ctx) {
-        app.next_prev_fn(app, direction = .Prev)
-    }
+    next_prev_icon_color := inactive_icon_color if app.repeat == .Single else lx.Color{ 250, 250, 250, 255 }
+
+    previous_clicked := lx.icon_button(actions, lx.ICON_SKIP_BACK, f32(icon_container_size), f32(icon_container_size),
+                                          icon_size, ctx = ctx, style = { icon_color = next_prev_icon_color })
+        if previous_clicked { app.next_prev_fn(app, direction = .Prev) }
 
     play_pause_icon := lx.ICON_PAUSE if app.playing else lx.ICON_PLAY
     size := icon_size + 15
-    if lx.icon_button(actions, play_pause_icon, f32(size + 10), f32(size + 10), size, ctx) {
+    if lx.icon_button(actions, play_pause_icon, f32(size + 10), f32(size + 10), size, ctx = ctx) {
         app.playing = !app.playing
     }
 
-    if lx.icon_button(actions, lx.ICON_SKIP_FORWARD, f32(icon_container_size), f32(icon_container_size), icon_size, ctx) {
-        app.next_prev_fn(app, direction = .Next)
-    }
+    next_clicked := lx.icon_button(actions, lx.ICON_SKIP_FORWARD, f32(icon_container_size), f32(icon_container_size),
+                                    icon_size, ctx = ctx, style = { icon_color = next_prev_icon_color })
+    if next_clicked { app.next_prev_fn(app, direction = .Next) }
 
     repeat_icon := lx.ICON_REPEAT
     repeat_icon_color := lx.Color{ 250, 250, 250, 255 }
