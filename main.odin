@@ -41,7 +41,6 @@ main :: proc() {
 
     previous_track := app.current_track
     prev_playing   := app.playing
-    shuffled       := app.shuffle
 
     music_dir, err := os.user_music_dir(context.allocator)
     ensure(err == nil, fmt.tprintf(" >> %v", err))
@@ -102,23 +101,15 @@ main :: proc() {
             }
         }
 
-        if app.shuffle && !shuffled {
-            rand.shuffle(app.tracks[:])
-            shuffled = app.shuffle
-        }
-
         if rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) && rl.IsKeyPressed(rl.KeyboardKey.Q) { break }
         if rl.IsKeyPressed(rl.KeyboardKey.D)     { app.show_debug = !app.show_debug }
         if rl.IsKeyPressed(rl.KeyboardKey.SPACE) { app.playing = !app.playing }
+        if rl.IsKeyPressed(rl.KeyboardKey.S)     { app.shuffle = !app.shuffle }
 
         if rl.IsKeyPressed(rl.KeyboardKey.N)     { app.next_prev_fn(&app, direction = .Next) }
         if rl.IsKeyPressed(rl.KeyboardKey.P)     { app.next_prev_fn(&app, direction = .Prev) }
         if rl.IsKeyPressed(rl.KeyboardKey.R)     { app.cycle_repeat_fn(&app) }
 
-        if rl.IsKeyPressed(rl.KeyboardKey.S) {
-            app.shuffle = !app.shuffle
-            shuffled    = !app.shuffle
-        }
 
         if rl.IsKeyPressed(rl.KeyboardKey.RIGHT) {
             pos := SEEK_SKIP + app.track_time.played
@@ -137,7 +128,6 @@ main :: proc() {
             previous_track = app.current_track
             if app.playing { rl.PlayMusicStream(audio) }
         }
-
 
 
         rl.ClearBackground(rl.Color{ 23, 23, 23, 255 })
@@ -241,7 +231,7 @@ next_prev :: proc(app: ^App, direction: Direction) {
             if new_track >= 0 { app.current_track = new_track }
         }
     case .Next:
-        new_track := app.current_track + 1
+        new_track := rand.int_max(len(app.tracks)) if app.shuffle else app.current_track + 1
         if app.repeat == .All {
             app.current_track = 0 if new_track >= len(app.tracks) else new_track
         } else {
