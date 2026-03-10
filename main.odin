@@ -16,10 +16,12 @@ SEEK_SKIP         :: 5 // In seconds
 
 FONT_DATA :: #load("./resources/fonts/JetBrainsMono-Regular.ttf")
 
-Direction :: enum { Prev, Next }
+Direction   :: enum { Prev, Next }
 Repeat_Mode :: enum { None, Single, All }
+
 App :: struct {
     version         : string,
+    music_dir       : string,
     show_debug      : bool,
     tracks          : [dynamic]string,
     current_track   : int,
@@ -46,6 +48,8 @@ main :: proc() {
     ensure(err == nil, fmt.tprintf(" >> %v", err))
     tracks, read_dir_err := os.read_directory_by_path(music_dir, -1, context.allocator)
     ensure(read_dir_err == nil, fmt.tprintf(" >> %v", err))
+
+    app.music_dir = music_dir
 
     for track in tracks {
         if track.type == .Regular && supported_ext(os.ext(track.fullpath)) {
@@ -80,7 +84,10 @@ main :: proc() {
         scroll_offsets = make(map[u32]f32),
     }
 
-    audio := rl.LoadMusicStream(strings.clone_to_cstring(app.tracks[app.current_track]))
+    audio : rl.Music
+    if len(app.tracks) != 0 {
+        audio = rl.LoadMusicStream(strings.clone_to_cstring(app.tracks[app.current_track]))
+    }
     defer rl.UnloadMusicStream(audio)
 
     context.allocator = context.temp_allocator
@@ -260,9 +267,10 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
     root := lx.box("root", 1, 1, direction = .Col, style = { gap = 7 })
 
     if len(app.tracks) == 0 {
+        font_scale : f32 = 1.5 if render_w > 600 else 0.95
         b := lx.box("no-tracks", -1, -1, direction = .Col, style = { bg = lavender_ish, align = .Center, justify = .Center, gap = 5, round = 10 })
         icon    := lx.icon(lx.ICON_FROWN, size = FONT_SIZE * 2, color = { 200, 200, 250, 255 })
-        message := lx.text("No tracks found in ~/Music", size = FONT_SIZE * 1.5)
+        message := lx.text(fmt.tprintf("No tracks found, checked %s", app.music_dir), size = FONT_SIZE * font_scale)
         lx.add_elements(b, icon, message)
         lx.add_elements(root, b)
         if app.show_debug { lx.add_elements(root, _debug(root, ctx, app)) }
