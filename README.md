@@ -11,6 +11,7 @@ This is my attempt at a music player that does that and only that.
 - [x] Keybinds for next/prev play/pause
 - [x] Seek forwards/back
 - [x] Shuffle
+- [X] Repeat(Single/All/None)
 - [ ] Cosmetic things
 
 I make alot of assumptions:
@@ -51,14 +52,15 @@ cp ./resources/smp.desktop ~/.local/share/application/
 
 ## Controls
 
-| Key         | Action                       |
-| ---         | ---                          |
-| SPACE       | play/pause                   |
-| N           | Next track                   |
-| P           | Previous track               |
-| S           | Toggle Shuffle               |
-| ARROW_RIGHT | Seek forward by 10 seconds   |
-| ARROW_LEFT  | Seek backwards by 10 seconds |
+| Key         | Action                      |
+| ---         | ---                         |
+| SPACE       | play/pause                  |
+| N           | Next track                  |
+| P           | Previous track              |
+| S           | Toggle Shuffle              |
+| R           | Cycle between repeat modes  |
+| ARROW_RIGHT | Seek forward by 5 seconds   |
+| ARROW_LEFT  | Seek backwards by 5 seconds |
 
 
 ![smp](media/smp.png)

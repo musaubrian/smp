@@ -18,15 +18,16 @@ FONT_DATA :: #load("./resources/fonts/JetBrainsMono-Regular.ttf")
 Direction :: enum { Prev, Next }
 Repeat_Mode :: enum { None, Single, All }
 App :: struct {
-    version       : string,
-    show_debug    : bool,
-    tracks        : [dynamic]string,
-    current_track : int,
-    track_time    : struct { total : f32, played : f32 },
-    playing       : bool,
-    shuffle       : bool,
-    repeat        : Repeat_Mode,
-    next_prev_fn  : proc(app: ^App, direction: Direction),
+    version         : string,
+    show_debug      : bool,
+    tracks          : [dynamic]string,
+    current_track   : int,
+    track_time      : struct { total : f32, played : f32 },
+    playing         : bool,
+    shuffle         : bool,
+    repeat          : Repeat_Mode,
+    next_prev_fn    : proc(app: ^App, direction: Direction),
+    cycle_repeat_fn : proc(app: ^App),
 }
 
 next_prev :: proc(app: ^App, direction: Direction) {
@@ -50,6 +51,14 @@ next_prev :: proc(app: ^App, direction: Direction) {
     }
 }
 
+cycle_repeat :: proc(app: ^App) {
+    switch app.repeat {
+    case .None:   app.repeat = .Single
+    case .Single: app.repeat = .All
+    case .All:    app.repeat = .None
+    }
+}
+
 load_new_music :: proc(app: ^App, audio: ^rl.Music) {
     rl.UnloadMusicStream(audio^)
     audio^ = rl.LoadMusicStream(strings.clone_to_cstring(app.tracks[app.current_track]))
@@ -67,7 +76,12 @@ supported_ext :: proc(file_ext: string) -> bool {
 }
 
 main :: proc() {
-    app := App{ version = #config(VERSION, ""), next_prev_fn = next_prev }
+    app := App{
+        version         = #config(VERSION, ""),
+        next_prev_fn    = next_prev,
+        cycle_repeat_fn = cycle_repeat,
+    }
+
     previous_track := app.current_track
     prev_playing   := app.playing
 
@@ -138,6 +152,7 @@ main :: proc() {
 
         if rl.IsKeyPressed(rl.KeyboardKey.N)     { app.next_prev_fn(&app, direction = .Next) }
         if rl.IsKeyPressed(rl.KeyboardKey.P)     { app.next_prev_fn(&app, direction = .Prev) }
+        if rl.IsKeyPressed(rl.KeyboardKey.R)     { app.cycle_repeat_fn(&app) }
 
         if rl.IsKeyPressed(rl.KeyboardKey.RIGHT) {
             pos := SEEK_SKIP + app.track_time.played
@@ -321,11 +336,7 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
     }
 
     if lx.icon_button(actions, repeat_icon, f32(icon_container_size), f32(icon_container_size), icon_size, ctx, style = { icon_color = repeat_icon_color }) {
-        switch app.repeat {
-        case .None:   app.repeat = .Single
-        case .Single: app.repeat = .All
-        case .All:    app.repeat = .None
-        }
+        app.cycle_repeat_fn(app)
     }
 
     lx.add_elements(controls, actions)
