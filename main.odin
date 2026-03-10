@@ -4,6 +4,7 @@ import "lx"
 import "core:strings"
 import "core:os"
 import "core:fmt"
+import "core:math/rand"
 import rl "vendor:raylib"
 
 SCREEN_WIDTH      :: 1080
@@ -30,50 +31,6 @@ App :: struct {
     cycle_repeat_fn : proc(app: ^App),
 }
 
-next_prev :: proc(app: ^App, direction: Direction) {
-    if app.repeat == .Single { return }
-
-    switch direction {
-    case .Prev:
-        new_track := app.current_track - 1
-        if app.repeat == .All {
-            app.current_track = len(app.tracks) - 1 if new_track < 0 else new_track
-        } else {
-            if new_track >= 0 { app.current_track = new_track }
-        }
-    case .Next:
-        new_track := app.current_track + 1
-        if app.repeat == .All {
-            app.current_track = 0 if new_track >= len(app.tracks) else new_track
-        } else {
-            if new_track < len(app.tracks) { app.current_track = new_track }
-        }
-    }
-}
-
-cycle_repeat :: proc(app: ^App) {
-    switch app.repeat {
-    case .None:   app.repeat = .Single
-    case .Single: app.repeat = .All
-    case .All:    app.repeat = .None
-    }
-}
-
-load_new_music :: proc(app: ^App, audio: ^rl.Music) {
-    rl.UnloadMusicStream(audio^)
-    audio^ = rl.LoadMusicStream(strings.clone_to_cstring(app.tracks[app.current_track]))
-}
-
-
-supported_ext :: proc(file_ext: string) -> bool {
-    supported_extensions :: []string{".mp3", ".wav", ".ogg"}
-    supported := false
-    for ext in supported_extensions {
-        if ext == file_ext { supported = true }
-    }
-
-    return supported
-}
 
 main :: proc() {
     app := App{
@@ -84,6 +41,7 @@ main :: proc() {
 
     previous_track := app.current_track
     prev_playing   := app.playing
+    shuffled       := app.shuffle
 
     music_dir, err := os.user_music_dir(context.allocator)
     ensure(err == nil, fmt.tprintf(" >> %v", err))
@@ -95,7 +53,6 @@ main :: proc() {
             append(&app.tracks, track.fullpath)
         }
     }
-
 
     rl.SetConfigFlags({ .WINDOW_RESIZABLE })
     rl.InitWindow(SCREEN_WIDTH,SCREEN_HEIGHT, "SMP")
@@ -145,14 +102,23 @@ main :: proc() {
             }
         }
 
+        if app.shuffle && !shuffled {
+            rand.shuffle(app.tracks[:])
+            shuffled = app.shuffle
+        }
+
         if rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) && rl.IsKeyPressed(rl.KeyboardKey.Q) { break }
         if rl.IsKeyPressed(rl.KeyboardKey.D)     { app.show_debug = !app.show_debug }
-        if rl.IsKeyPressed(rl.KeyboardKey.S)     { app.shuffle = !app.shuffle }
         if rl.IsKeyPressed(rl.KeyboardKey.SPACE) { app.playing = !app.playing }
 
         if rl.IsKeyPressed(rl.KeyboardKey.N)     { app.next_prev_fn(&app, direction = .Next) }
         if rl.IsKeyPressed(rl.KeyboardKey.P)     { app.next_prev_fn(&app, direction = .Prev) }
         if rl.IsKeyPressed(rl.KeyboardKey.R)     { app.cycle_repeat_fn(&app) }
+
+        if rl.IsKeyPressed(rl.KeyboardKey.S) {
+            app.shuffle = !app.shuffle
+            shuffled    = !app.shuffle
+        }
 
         if rl.IsKeyPressed(rl.KeyboardKey.RIGHT) {
             pos := SEEK_SKIP + app.track_time.played
@@ -237,6 +203,21 @@ main :: proc() {
 }
 
 
+load_new_music :: proc(app: ^App, audio: ^rl.Music) {
+    rl.UnloadMusicStream(audio^)
+    audio^ = rl.LoadMusicStream(strings.clone_to_cstring(app.tracks[app.current_track]))
+}
+
+supported_ext :: proc(file_ext: string) -> bool {
+    supported_extensions :: []string{".mp3", ".wav", ".ogg"}
+    supported := false
+    for ext in supported_extensions {
+        if ext == file_ext { supported = true }
+    }
+
+    return supported
+}
+
 measure_text :: proc(t: ^lx.Text, ctx: ^lx.Context) -> lx.Vec2 {
     font_any := ctx.font.icon if t.icon else ctx.font.text
     rl_font, ok := font_any.(^rl.Font)
@@ -246,6 +227,35 @@ measure_text :: proc(t: ^lx.Text, ctx: ^lx.Context) -> lx.Vec2 {
 
     v := rl.MeasureTextEx(rl_font^, strings.clone_to_cstring(t.content), f32(t.size), 1)
     return { v.x, v.y }
+}
+
+next_prev :: proc(app: ^App, direction: Direction) {
+    if app.repeat == .Single { return }
+
+    switch direction {
+    case .Prev:
+        new_track := app.current_track - 1
+        if app.repeat == .All {
+            app.current_track = len(app.tracks) - 1 if new_track < 0 else new_track
+        } else {
+            if new_track >= 0 { app.current_track = new_track }
+        }
+    case .Next:
+        new_track := app.current_track + 1
+        if app.repeat == .All {
+            app.current_track = 0 if new_track >= len(app.tracks) else new_track
+        } else {
+            if new_track < len(app.tracks) { app.current_track = new_track }
+        }
+    }
+}
+
+cycle_repeat :: proc(app: ^App) {
+    switch app.repeat {
+    case .None:   app.repeat = .Single
+    case .Single: app.repeat = .All
+    case .All:    app.repeat = .None
+    }
 }
 
 
