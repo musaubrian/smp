@@ -255,6 +255,7 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
 
     lavender_ish        :: lx.Color{ 120, 120, 180, 255 }
     inactive_icon_color :: lx.Color{ 180, 180, 180, 150 }
+    active_icon_color   :: lx.Color{ 250, 250, 250, 255 }
 
     root := lx.box("root", 1, 1, direction = .Col, style = { gap = 7 })
 
@@ -274,29 +275,33 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
     header_left := lx.box("header_l", -1, -1, style = { padding = 1 })
     lx.add_elements(header_left, lx.text(fmt.tprintf("Track: #%d/%d",app.current_track+1, len(app.tracks)+1), size = 20))
     header_right := lx.box("header_r", -1, -1, style = { padding = 1, justify = .End })
-    if render_w > 400 {
-        lx.add_elements(header_right, lx.text(app.version, size = 20))
-    }
+    if render_w > 400 { lx.add_elements(header_right, lx.text(app.version, size = 20)) }
 
     lx.add_elements(header, header_left, header_right)
 
-    track_list := lx.scroll_area("track_list", -1, -1, ctx = ctx, style = { bg = { 70, 70, 70, 150 }, gap = 7 })
-    for track, index in app.tracks {
-        bg := lavender_ish if app.current_track == index else lx.Color{ 120, 120, 120, 200 }
-        if lx.button(track_list, os.stem(track), -1, 40, ctx = ctx, size_mode = .Mixed, justify = .Start, style = { bg = bg, round = 10 }) {
-            app.current_track = index
+    show_tracklist := render_h > 300
+    tracklist_h    := -1 if show_tracklist else 0
+    tracklist      := lx.scroll_area("tracklist", -1, f32(tracklist_h), ctx = ctx, style = { bg = { 70, 70, 70, 150 }, gap = 7 })
+    if show_tracklist {
+        for track, index in app.tracks {
+            bg := lavender_ish if app.current_track == index else lx.Color{ 120, 120, 120, 200 }
+            if lx.button(tracklist, os.stem(track), -1, 40, ctx = ctx, size_mode = .Mixed, justify = .Start, style = { bg = bg, round = 10 }) {
+                app.current_track = index
+            }
         }
     }
 
-
-
     controls_height : f32 = 0.15 if render_h > 700 else 0.25
-    controls := lx.box("controls", -1, controls_height, direction = .Col, style = { justify = .Start, gap = 5 })
+    if !show_tracklist { controls_height = -1 } // ignore the options, we need to fill
+    controls := lx.box("controls", -1, controls_height, direction = .Col, style = { justify = .Start, gap = 3 })
 
-    name_and_times := lx.box("name_and_times", -1, -1, style = { align = .Center })
-    track_times := lx.box("track_times", -1, -1, style = { justify = .End, align = .Center, padding = 1 })
+    name_and_time_alignment : lx.Alignment = .Center if show_tracklist else .End
+    name_and_times := lx.box("name_and_times", -1, -1, style = { align = name_and_time_alignment })
+    track_times := lx.box("track_times", -1, -1, style = { justify = .End, align = name_and_time_alignment, padding = 1 })
     times := fmt.tprintf("%s/%s", format_seconds(int(app.track_time.played)), format_seconds(int(app.track_time.total)))
-    lx.add_elements(track_times, lx.text(times, size = FONT_SIZE * 0.9))
+
+    if render_w > 400 { lx.add_elements(track_times, lx.text(times, size = FONT_SIZE * 0.9)) }
+
     current_track := lx.text(os.base(app.tracks[app.current_track]), size = FONT_SIZE * 0.9)
     lx.add_elements(name_and_times, current_track, track_times)
     lx.add_elements(controls, name_and_times)
@@ -307,14 +312,12 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
     actions := lx.box("actions", -1, -1, style = { align = .Center, justify = .Center, gap = 7 })
 
 
-    shuffle_icon_color := lx.Color{ 250, 250, 250, 255 } if app.shuffle else inactive_icon_color
-    if lx.icon_button(actions, lx.ICON_SHUFFLE, f32(icon_container_size), f32(icon_container_size),
+    shuffle_icon_color := active_icon_color if app.shuffle else inactive_icon_color
+    shuffle_clicked := lx.icon_button(actions, lx.ICON_SHUFFLE, f32(icon_container_size), f32(icon_container_size),
                         icon_size, ctx, style = { icon_color = shuffle_icon_color })
-    {
-        app.shuffle = !app.shuffle
-    }
+    if shuffle_clicked { app.shuffle = !app.shuffle }
 
-    next_prev_icon_color := inactive_icon_color if app.repeat == .Single else lx.Color{ 250, 250, 250, 255 }
+    next_prev_icon_color := inactive_icon_color if app.repeat == .Single else active_icon_color
 
     previous_clicked := lx.icon_button(actions, lx.ICON_SKIP_BACK, f32(icon_container_size), f32(icon_container_size),
                                           icon_size, ctx = ctx, style = { icon_color = next_prev_icon_color })
@@ -338,12 +341,12 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
     case .Single: repeat_icon = lx.ICON_REPEAT_1
     }
 
-    if lx.icon_button(actions, repeat_icon, f32(icon_container_size), f32(icon_container_size), icon_size, ctx, style = { icon_color = repeat_icon_color }) {
-        app.cycle_repeat_fn(app)
-    }
+    cycle_repeat_clicked := lx.icon_button(actions, repeat_icon, f32(icon_container_size), f32(icon_container_size),
+                                              icon_size, ctx, style = { icon_color = repeat_icon_color })
+     if cycle_repeat_clicked { app.cycle_repeat_fn(app) }
 
     lx.add_elements(controls, actions)
-    lx.add_elements(root, header, track_list, controls)
+    lx.add_elements(root, header, tracklist, controls)
     if app.show_debug { lx.add_elements(root, _debug(root, ctx, app)) }
 
 
