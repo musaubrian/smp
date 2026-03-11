@@ -409,6 +409,7 @@ help :: proc(root: ^lx.Box, ctx: ^lx.Context, app: ^App, screen_w: i32) {
  R            Cycle between repeat modes
  ARROW_RIGHT  Seek forward by 5 seconds
  ARROW_LEFT   Seek backwards by 5 seconds
+ ?            Show this menu
  `
     w := 0.5 if screen_w > 900 else 0.9
     d := lx.dialog("help", f32(w), 0.4, ctx = ctx, anchor = root, visible = &app.show_help, style = { padding = 10 })
