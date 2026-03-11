@@ -23,6 +23,7 @@ App :: struct {
     version         : string,
     music_dir       : string,
     show_debug      : bool,
+    show_help       : bool,
     tracks          : [dynamic]string,
     current_track   : int,
     track_time      : struct { total : f32, played : f32 },
@@ -110,6 +111,11 @@ main :: proc() {
         }
 
         if rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) && rl.IsKeyPressed(rl.KeyboardKey.Q) { break }
+
+        if (rl.IsKeyDown(rl.KeyboardKey.LEFT_SHIFT) || rl.IsKeyDown(rl.KeyboardKey.RIGHT_SHIFT)) && rl.IsKeyPressed(rl.KeyboardKey.SLASH) {
+            app.show_help = !app.show_help
+        }
+
         if rl.IsKeyPressed(rl.KeyboardKey.D)     { app.show_debug = !app.show_debug }
         if rl.IsKeyPressed(rl.KeyboardKey.SPACE) { app.playing = !app.playing }
         if rl.IsKeyPressed(rl.KeyboardKey.S)     { app.shuffle = !app.shuffle }
@@ -358,6 +364,7 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
     lx.add_elements(root, header, tracklist, controls)
 
     debug(root, ctx, app)
+    help(root, ctx, app, render_w)
 
     lx.layout(root, { 0, 0, f32(render_w), f32(render_h) }, ctx)
 
@@ -390,4 +397,20 @@ debug :: proc(root: ^lx.Box, ctx: ^lx.Context, app: ^App) {
 }}`, app.version, app.current_track + 1, app.playing, app.shuffle, app.repeat)
     lx.add_elements(debug_box, lx.text(app_state, size = FONT_SIZE), lx.text(live_tree, size = FONT_SIZE))
     lx.add_elements(d, debug_box)
+}
+
+help :: proc(root: ^lx.Box, ctx: ^lx.Context, app: ^App, screen_w: i32) {
+    help_text := `[Keybinds]
+
+ SPACE        Play/Pause
+ N            Next track
+ P            Previous track
+ S            Toggle Shuffle
+ R            Cycle between repeat modes
+ ARROW_RIGHT  Seek forward by 5 seconds
+ ARROW_LEFT   Seek backwards by 5 seconds
+ `
+    w := 0.5 if screen_w > 900 else 0.9
+    d := lx.dialog("help", f32(w), 0.4, ctx = ctx, anchor = root, visible = &app.show_help, style = { padding = 10 })
+    lx.add_elements(d, lx.text(help_text))
 }
