@@ -77,11 +77,12 @@ main :: proc() {
     rl.SetTextureFilter(icon_font.texture, .BILINEAR)
 
     ctx := lx.Context {
-        font = { text = &text_font, icon = &icon_font },
-        measure_text = measure_text,
-        begin_scissor = proc(r: lx.Rect) { rl.BeginScissorMode(i32(r.x), i32(r.y), i32(r.w), i32(r.h)) },
-        end_scissor   = proc() { rl.EndScissorMode() },
+        font           = { text = &text_font, icon = &icon_font },
+        measure_text   = measure_text,
+        begin_scissor  = proc(r: lx.Rect) { rl.BeginScissorMode(i32(r.x), i32(r.y), i32(r.w), i32(r.h)) },
+        end_scissor    = proc() { rl.EndScissorMode() },
         scroll_offsets = make(map[u32]f32),
+        floaters       = make(map[u32]^lx.Box),
     }
 
     audio : rl.Music
@@ -273,7 +274,7 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
         message := lx.text(fmt.tprintf("No tracks found, checked %s", app.music_dir), size = FONT_SIZE * font_scale)
         lx.add_elements(b, icon, message)
         lx.add_elements(root, b)
-        if app.show_debug { lx.add_elements(root, _debug(root, ctx, app)) }
+        debug(root, ctx, app)
         lx.layout(root, { 0, 0, f32(render_w), f32(render_h) }, ctx)
         return root
     }
@@ -355,8 +356,8 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
 
     lx.add_elements(controls, actions)
     lx.add_elements(root, header, tracklist, controls)
-    if app.show_debug { lx.add_elements(root, _debug(root, ctx, app)) }
 
+    debug(root, ctx, app)
 
     lx.layout(root, { 0, 0, f32(render_w), f32(render_h) }, ctx)
 
@@ -375,10 +376,11 @@ format_seconds :: proc(seconds: int) -> string {
     return fmt.tprintf("%02d:%02d", minutes, secs)
 }
 
-_debug :: proc(root: ^lx.Box, ctx: ^lx.Context, app: ^App) -> ^lx.Box {
+debug :: proc(root: ^lx.Box, ctx: ^lx.Context, app: ^App) {
     live_tree := lx.get_heirarchy(root)
 
-    debug_box := lx.scroll_area("debug", -1, -1, ctx = ctx, style = { bg = { 70, 70, 70, 100 }, gap = 10 })
+    d := lx.dialog("debug", 0.8, 0.8, ctx = ctx, anchor = root, visible = &app.show_debug, show_close = false, style = { padding = 10, round = 10 })
+    debug_box := lx.scroll_area("debug", -1, -1, ctx = ctx)
     app_state := fmt.tprintf(`App {{
     version=%s,
     current_track=%d,
@@ -387,6 +389,5 @@ _debug :: proc(root: ^lx.Box, ctx: ^lx.Context, app: ^App) -> ^lx.Box {
     repeat=%v,
 }}`, app.version, app.current_track + 1, app.playing, app.shuffle, app.repeat)
     lx.add_elements(debug_box, lx.text(app_state, size = FONT_SIZE), lx.text(live_tree, size = FONT_SIZE))
-
-    return debug_box
+    lx.add_elements(d, debug_box)
 }
