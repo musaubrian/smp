@@ -66,3 +66,4 @@ cp ./resources/smp.desktop ~/.local/share/application/
 
 ![smp](media/smp.png)
 ![smp smpl](media/smp-smol.png)
+![smp help](media/smp-help.png)
