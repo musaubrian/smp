@@ -61,6 +61,7 @@ cp ./resources/smp.desktop ~/.local/share/application/
 | R           | Cycle between repeat modes  |
 | ARROW_RIGHT | Seek forward by 5 seconds   |
 | ARROW_LEFT  | Seek backwards by 5 seconds |
+| ?           | Show the keybinds           |
 
 
 ![smp](media/smp.png)
