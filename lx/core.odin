@@ -232,7 +232,7 @@ layout :: proc(b: ^Box, parent_rect: Rect, ctx: ^Context) {
 
     is_row := b.direction == .Row
 
-    // Reduce available to shift scrollbar of the contents
+    // Reduce available to shift scrollbar off the contents
     if b.scroll.enabled {
         if is_row { available_h -= _Scrollbar_Size } else { available_w -= _Scrollbar_Size }
     }
@@ -257,7 +257,6 @@ layout :: proc(b: ^Box, parent_rect: Rect, ctx: ^Context) {
 
             if el.size_mode == .Mixed {
                 if is_row { el.bounds.w = el.w; el.bounds.h = el.h } else { el.bounds.w = el.w; el.bounds.h = el.h }
-                // -1 on cross axis still means fill
                 if cross_frac == -1 {
                     if is_row { el.bounds.h = available_h } else { el.bounds.w = available_w }
                 }
@@ -475,6 +474,19 @@ render :: proc(b: ^Box, ctx: ^Context, draw_fn: proc(element: ^Element, ctx: ^Co
     for &element in b.elements {
         switch el in element {
         case ^Box:
+            if b.scroll.enabled {
+                // Skip drawing items outside the scroll area
+                // would be nice to have some way of not actually putting them in the tree
+                // when we exceed the bounds, but this cuts us down to 7-11% cpu usage for 200+ buttons
+                // being drawn from 15+% which is not much cause if we dont push the list items
+                // before layout, we drop to 2-4% which is much better, meaning that
+                // the issue is in how we do scrollable items
+                //
+                // This is more of a band-aid cause we still load 200+ buttons (box+text) in memory
+                // but we only ever render whats in the viewport,
+                if (el.bounds.y + el.bounds.h) < b.bounds.y { break }
+                if el.bounds.y > (b.bounds.h + b.bounds.y)  { break }
+            }
             render(el, ctx, draw_fn)
         case ^Text:
             if el.hidden { return }

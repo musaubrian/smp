@@ -293,7 +293,6 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
     if render_w > 400 { lx.add_elements(header_right, lx.text(app.version, size = 20)) }
 
     lx.add_elements(header, header_left, header_right)
-
     show_tracklist := render_h > 300
     tracklist_h    := -1 if show_tracklist else 0
     tracklist      := lx.scroll_area("tracklist", -1, f32(tracklist_h), ctx = ctx, style = { bg = { 70, 70, 70, 150 }, gap = 7 })

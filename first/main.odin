@@ -182,7 +182,7 @@ get_version :: proc() -> string {
 			silent = true,
 		},
 	)
-	if !commit_state.success {fatal(c_err_msg)}
+	if !commit_state.success { fatal(c_err_msg) }
 	commit_hash := strings.trim_right(commit_out, "\n")
 
 	tag_state, tag_out, t_err_msg := run_command(
