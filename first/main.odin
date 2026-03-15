@@ -6,6 +6,7 @@ import "core:os"
 import "core:strings"
 import "core:time"
 
+
 Command :: struct {
 	args:        []string,
 	working_dir: string,
@@ -131,6 +132,8 @@ run_command :: proc(
 
 rebuild :: proc() {
 	current_bin := os.args[0]
+	if strings.has_suffix(current_bin, ".old") { fatal("Using the .old bin, You probably meant to use first.bin") }
+
 	bin_modified_time, bin_mtime_err := os.last_write_time_by_name(current_bin)
 	if bin_mtime_err != nil {
 		fatal(os.error_string(bin_mtime_err))
@@ -141,7 +144,7 @@ rebuild :: proc() {
 	}
 
 	diff := time.diff(bin_modified_time, bin_src_modified_time)
-	if diff < 0 {return}
+	if diff < 0 { return }
 
 	old_bin := fmt.aprintf("%s.old", current_bin)
 	rename_err := os.rename(current_bin, old_bin)
@@ -167,8 +170,8 @@ rebuild :: proc() {
 		Command{args = rerun_cmds[:], working_dir = WORK_DIR},
 	)
 
-	if rerun_out != "" {fmt.print(rerun_out)}
-	if rerun_err != "" {fmt.eprint(rerun_err)}
+	if rerun_out != "" { fmt.print(rerun_out) }
+	if rerun_err != "" { fmt.eprint(rerun_err) }
 	os.exit(rerun_state.exit_code)
 }
 
