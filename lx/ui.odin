@@ -14,6 +14,7 @@ point_in_rect :: proc(rect: Rect, point: Vec2) -> bool {
            point.y >= rect.y && point.y <= rect.y + rect.h
 }
 
+
 encode_icon :: proc(c: rune, allocator := context.allocator) -> string {
     buf, end := utf8.encode_rune(c)
     s := make([]u8, end, allocator)

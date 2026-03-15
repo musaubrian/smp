@@ -394,7 +394,11 @@ debug :: proc(root: ^lx.Box, ctx: ^lx.Context, app: ^App) {
     shuffle=%v,
     repeat=%v,
 }}`, app.version, app.current_track + 1, app.playing, app.shuffle, app.repeat)
-    lx.add_elements(debug_box, lx.text(app_state, size = FONT_SIZE), lx.text(live_tree, size = FONT_SIZE))
+    lx.add_elements(debug_box, lx.text(app_state, size = FONT_SIZE))
+    tree_split := strings.split(live_tree, "\n")
+    for entry in tree_split {
+        lx.add_elements(debug_box, lx.text(entry, size = FONT_SIZE))
+    }
     lx.add_elements(d, debug_box)
 }
 

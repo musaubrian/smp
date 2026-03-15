@@ -116,7 +116,7 @@ run_command :: proc(
 		command     = cmd.args,
 	}
 
-	if !cmd.silent {fmt.printfln("[INFO] CMD: %s", strings.join(cmd.args, " "))}
+	if !cmd.silent { fmt.printfln("[INFO] CMD: %s", strings.join(cmd.args, " ")) }
 	process_state, stdout, stderr, process_err := os.process_exec(process_desc, context.allocator)
 	if process_err != nil {
 		return os.Process_State{success = false}, "", os.error_string(process_err)
