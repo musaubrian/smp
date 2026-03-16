@@ -386,7 +386,7 @@ debug :: proc(root: ^lx.Box, ctx: ^lx.Context, app: ^App) {
     live_tree := lx.get_heirarchy(root)
 
     d := lx.dialog("debug", 0.8, 0.8, ctx = ctx, anchor = root, visible = &app.show_debug, show_close = false, style = { padding = 10, round = 10 })
-    debug_box := lx.scroll_area("debug", -1, -1, ctx = ctx)
+    debug_box := lx.scroll_area("debug", -1, -1, ctx = ctx, style = { gap = 2 })
     app_state := fmt.tprintf(`App {{
     version=%s,
     current_track=%d,
@@ -415,6 +415,8 @@ help :: proc(root: ^lx.Box, ctx: ^lx.Context, app: ^App, screen_w: i32) {
  ?            Show this menu
  `
     w := 0.5 if screen_w > 900 else 0.9
-    d := lx.dialog("help", f32(w), 0.4, ctx = ctx, anchor = root, visible = &app.show_help, style = { padding = 10 })
-    lx.add_elements(d, lx.text(help_text))
+    d := lx.dialog("help", f32(w), 0.4, ctx = ctx, anchor = root, visible = &app.show_help, style = { padding = 10, round = 10 })
+    help_scrollbox := lx.scroll_area("help-text", -1, -1, ctx = ctx, style = { gap = 2 })
+    for entry in strings.split(help_text, "\n") { lx.add_elements(help_scrollbox, lx.text(entry)) }
+    lx.add_elements(d, help_scrollbox)
 }
