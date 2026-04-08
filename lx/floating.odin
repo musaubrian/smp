@@ -15,8 +15,10 @@ dialog :: proc(label: string, w, h: f32, visible: ^bool, anchor: ^Box, show_clos
     dialog_style.bg = {}
     dialog_style.round = 0
 
+    overlay_bg := _Default_Bg
+    overlay_bg.a /= 3
     overlay := box(fmt.tprintf("%s-label", label), 1, 1, .Col, .Relative, hidden = !visible^, parent = anchor, style = {
-        bg      = { style.bg.r, style.bg.g, style.bg.b, style.bg.a / 10 },
+        bg      = overlay_bg,
         align   = .Center,
         justify = .Center,
     })
