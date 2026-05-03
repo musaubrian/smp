@@ -13,8 +13,9 @@ Command :: struct {
 	silent:      bool,
 }
 
-BIN_SRC :: "first/main.odin"
-WORK_DIR :: "."
+BIN_SRC   :: "first/main.odin"
+WORK_DIR  :: "."
+OUT_DIR   :: "./bin"
 DEFAULT_BUILD_ARGS := []string{"-vet", "-vet-style", "-warnings-as-errors"}
 
 usage :: proc() {
@@ -55,9 +56,12 @@ main :: proc() {
 		}
 	}
 
+	mkdir_err := os.mkdir_all(fmt.tprintf("%s/resources", OUT_DIR))
+	if (mkdir_err != nil && mkdir_err != .Exist) { fatal(os.error_string(mkdir_err)) }
 
-	build_args := [dynamic]string{"odin", "build", WORK_DIR, "-out:smp"}
-	for default_arg in DEFAULT_BUILD_ARGS {append(&build_args, default_arg)}
+
+	build_args := [dynamic]string{"odin", "build", WORK_DIR, fmt.tprintf("-out:%s/smp", OUT_DIR)}
+	for default_arg in DEFAULT_BUILD_ARGS { append(&build_args, default_arg) }
 	if show_timings {append(&build_args, "-show-timings")}
 
 	if release_mode {
@@ -67,12 +71,10 @@ main :: proc() {
 	}
 
 	build_state, _, build_err := run_command(Command{args = build_args[:]})
-	if !build_state.success {fatal(build_err)}
-	if build_err != "" {fmt.eprintln(build_err)}
+	if !build_state.success { fatal(build_err) }
+	if build_err != "" { fmt.eprintln(build_err) }
 
-	when ODIN_OS == .Linux {
-		if release_mode { setup_desktop_file() }
-	}
+	when ODIN_OS == .Linux { if release_mode { setup_desktop_file() } }
 
 }
 
@@ -89,7 +91,7 @@ Categories=Music;
 	if err != nil { fmt.eprintln("Failed to get smp root path") }
 
 	logo_path         := fmt.tprintf("%s/resources/logo/smp.png", smp_root)
-	desktop_file_path := fmt.tprintf("./resources/smp.desktop")
+	desktop_file_path := fmt.tprintf("%s/resources/smp.desktop", OUT_DIR)
 
 	d, _ := strings.replace(desktop_file, "<replace>", logo_path, 1)
 	if os.is_file(desktop_file_path) { return }
