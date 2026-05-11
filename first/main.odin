@@ -15,7 +15,7 @@ Command :: struct {
 
 BIN_SRC   :: "first/main.odin"
 WORK_DIR  :: "."
-OUT_DIR   :: "./bin"
+BUILD_DIR   :: "./bin"
 DEFAULT_BUILD_ARGS := []string{"-vet", "-vet-style", "-warnings-as-errors"}
 
 usage :: proc() {
@@ -56,11 +56,11 @@ main :: proc() {
 		}
 	}
 
-	mkdir_err := os.mkdir_all(fmt.tprintf("%s/resources", OUT_DIR))
+	mkdir_err := os.mkdir_all(fmt.tprintf("%s/resources", BUILD_DIR))
 	if (mkdir_err != nil && mkdir_err != .Exist) { fatal(os.error_string(mkdir_err)) }
 
 
-	build_args := [dynamic]string{"odin", "build", WORK_DIR, fmt.tprintf("-out:%s/smp", OUT_DIR)}
+	build_args := [dynamic]string{"odin", "build", WORK_DIR, fmt.tprintf("-out:%s/smp", BUILD_DIR)}
 	for default_arg in DEFAULT_BUILD_ARGS { append(&build_args, default_arg) }
 	if show_timings {append(&build_args, "-show-timings")}
 
@@ -91,7 +91,7 @@ Categories=Music;
 	if err != nil { fmt.eprintln("Failed to get smp root path") }
 
 	logo_path         := fmt.tprintf("%s/resources/logo/smp.png", smp_root)
-	desktop_file_path := fmt.tprintf("%s/resources/smp.desktop", OUT_DIR)
+	desktop_file_path := fmt.tprintf("%s/resources/smp.desktop", BUILD_DIR)
 
 	d, _ := strings.replace(desktop_file, "<replace>", logo_path, 1)
 	if os.is_file(desktop_file_path) { return }
@@ -134,6 +134,8 @@ run_command :: proc(
 
 rebuild :: proc() {
 	current_bin := os.args[0]
+	old_bin := fmt.aprintf("%s/%s.old", BUILD_DIR, os.base(current_bin))
+
 	if strings.has_suffix(current_bin, ".old") { fatal("Using the .old bin, You probably meant to use first.bin") }
 
 	bin_modified_time, bin_mtime_err := os.last_write_time_by_name(current_bin)
@@ -148,15 +150,14 @@ rebuild :: proc() {
 	diff := time.diff(bin_modified_time, bin_src_modified_time)
 	if diff < 0 { return }
 
-	old_bin := fmt.aprintf("%s.old", current_bin)
 	rename_err := os.rename(current_bin, old_bin)
-	if rename_err != nil {fatal("Failed to rename binary")}
+	if rename_err != nil { fatal("Failed to rename binary") }
 	fmt.printfln("[INFO] renamed %s -> %s", current_bin, old_bin)
 
 	rebuild_state, rebuild_out, rebuild_err := run_command(
 		Command {
-			args = []string{"odin", "build", "first", fmt.aprintf("-out:%s", current_bin)},
-			working_dir = WORK_DIR,
+			args = []string{"odin", "build", "first/", fmt.aprintf("-out:%s", current_bin)},
+			working_dir = ".",
 		},
 	)
 	if !rebuild_state.success {
@@ -167,7 +168,7 @@ rebuild :: proc() {
 
 	// run ourself again as a subprocess
 	rerun_cmds := [dynamic]string{current_bin}
-	for old_arg in os.args[1:] {append(&rerun_cmds, old_arg)}
+	for old_arg in os.args[1:] { append(&rerun_cmds, old_arg) }
 	rerun_state, rerun_out, rerun_err := run_command(
 		Command{args = rerun_cmds[:], working_dir = WORK_DIR},
 	)
@@ -198,7 +199,10 @@ get_version :: proc() -> string {
 		},
 	)
 	tag := strings.trim_right(tag_out, "\n")
-	if !tag_state.success {fmt.eprintln("[WARN] No tags found, using default tag"); tag = DEFAULT_TAG}
+	if !tag_state.success {
+		tag = DEFAULT_TAG
+		fmt.eprintln("[WARN] No tags found, using default tag");
+	}
 
 	return fmt.aprintf("%s-%s", tag, commit_hash)
 }
