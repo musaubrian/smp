@@ -30,17 +30,11 @@ App :: struct {
     playing         : bool,
     shuffle         : bool,
     repeat          : Repeat_Mode,
-    next_prev_fn    : proc(app: ^App, direction: Direction),
-    cycle_repeat_fn : proc(app: ^App),
 }
 
 
 main :: proc() {
-    app := App{
-        version         = #config(VERSION, ""),
-        next_prev_fn    = next_prev,
-        cycle_repeat_fn = cycle_repeat,
-    }
+    app := App{ version = #config(VERSION, "") }
 
     previous_track := app.current_track
     prev_playing   := app.playing
@@ -106,7 +100,7 @@ main :: proc() {
                 app.playing = false
                 rl.StopMusicStream(audio)
             } else {
-                app.next_prev_fn(&app, direction = .Next)
+                next_prev(&app, direction = .Next)
             }
         }
 
@@ -120,9 +114,9 @@ main :: proc() {
         if rl.IsKeyPressed(rl.KeyboardKey.SPACE) { app.playing = !app.playing }
         if rl.IsKeyPressed(rl.KeyboardKey.S)     { app.shuffle = !app.shuffle }
 
-        if rl.IsKeyPressed(rl.KeyboardKey.N)     { app.next_prev_fn(&app, direction = .Next) }
-        if rl.IsKeyPressed(rl.KeyboardKey.P)     { app.next_prev_fn(&app, direction = .Prev) }
-        if rl.IsKeyPressed(rl.KeyboardKey.R)     { app.cycle_repeat_fn(&app) }
+        if rl.IsKeyPressed(rl.KeyboardKey.N)     { next_prev(&app, direction = .Next) }
+        if rl.IsKeyPressed(rl.KeyboardKey.P)     { next_prev(&app, direction = .Prev) }
+        if rl.IsKeyPressed(rl.KeyboardKey.R)     { cycle_repeat(&app) }
 
 
         if rl.IsKeyPressed(rl.KeyboardKey.RIGHT) {
@@ -335,7 +329,7 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
 
     previous_clicked := lx.icon_button(actions, lx.ICON_SKIP_BACK, f32(icon_container_size), f32(icon_container_size),
                                           icon_size, ctx = ctx, style = { icon_color = next_prev_icon_color })
-        if previous_clicked { app.next_prev_fn(app, direction = .Prev) }
+        if previous_clicked { next_prev(app, direction = .Prev) }
 
     play_pause_icon := lx.ICON_PAUSE if app.playing else lx.ICON_PLAY
     size := icon_size + 15
@@ -345,7 +339,7 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
 
     next_clicked := lx.icon_button(actions, lx.ICON_SKIP_FORWARD, f32(icon_container_size), f32(icon_container_size),
                                     icon_size, ctx = ctx, style = { icon_color = next_prev_icon_color })
-    if next_clicked { app.next_prev_fn(app, direction = .Next) }
+    if next_clicked { next_prev(app, direction = .Next) }
 
     repeat_icon := lx.ICON_REPEAT
     repeat_icon_color := lx.Color{ 250, 250, 250, 255 }
@@ -357,12 +351,12 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
 
     cycle_repeat_clicked := lx.icon_button(actions, repeat_icon, f32(icon_container_size), f32(icon_container_size),
                                               icon_size, ctx, style = { icon_color = repeat_icon_color })
-     if cycle_repeat_clicked { app.cycle_repeat_fn(app) }
+     if cycle_repeat_clicked { cycle_repeat(app) }
 
     lx.add_elements(controls, actions)
     lx.add_elements(root, header, tracklist, controls)
 
-    debug(root, ctx, app)
+    when ODIN_DEBUG { debug(root, ctx, app) }
     help(root, ctx, app, render_w)
 
     lx.layout(root, { 0, 0, f32(render_w), f32(render_h) }, ctx)
