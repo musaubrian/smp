@@ -204,7 +204,7 @@ get_version :: proc() -> string {
 		fmt.eprintln("[WARN] No tags found, using default tag");
 	}
 
-	return fmt.aprintf("%s-%s", tag, commit_hash)
+	return fmt.aprintf("%s:%s", tag, commit_hash)
 }
 
 fatal :: proc(message: string) {
