@@ -8,6 +8,7 @@ Button_Style :: struct {
     padding    : int,
     icon_align : Icon_Align,
     icon_color : Color,
+    font_size  : f32,
 }
 
 button :: proc(parent: ^Box, label: string, w, h: f32, ctx: ^Context, size_mode: Size_Mode = .Relative, justify : Alignment = .Center, style : Button_Style = {}) -> bool {
@@ -20,7 +21,7 @@ button :: proc(parent: ^Box, label: string, w, h: f32, ctx: ^Context, size_mode:
         padding  = style.padding,
     }
     base := box(label, w, h, parent = parent, size_mode = size_mode, style = button_style_with_defaults)
-    txt := text(label)
+    txt := text(label, size = style.font_size if style.font_size > 0 else _Text_Size)
     add_elements(base, txt)
     add_elements(parent, base)
 

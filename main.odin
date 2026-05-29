@@ -10,11 +10,11 @@ import rl "vendor:raylib"
 SCREEN_WIDTH      :: 1080
 SCREEN_HEIGHT     :: 720
 MOUSE_SENSITIVITY :: 60
-FONT_SIZE         :: 24
+FONT_SIZE         :: 22
 SEEK_SKIP         :: 5 // In seconds
 
 
-FONT_DATA :: #load("./resources/fonts/JetBrainsMono-Regular.ttf")
+FONT_DATA :: #load("./resources/fonts/MartianMono-NrRg.ttf")
 
 Direction   :: enum { Prev, Next }
 Repeat_Mode :: enum { None, Single, All }
@@ -30,11 +30,15 @@ App :: struct {
     playing         : bool,
     shuffle         : bool,
     repeat          : Repeat_Mode,
+    update_title    : bool,
 }
 
 
 main :: proc() {
-    app := App{ version = #config(VERSION, "") }
+    app := App{
+        version = #config(VERSION, "Unknown"),
+        update_title = true,
+    }
 
     previous_track := app.current_track
     prev_playing   := app.playing
@@ -53,7 +57,7 @@ main :: proc() {
     }
 
     rl.SetConfigFlags({ .WINDOW_RESIZABLE })
-    rl.InitWindow(SCREEN_WIDTH,SCREEN_HEIGHT, "SMP")
+    rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "SMP")
     defer rl.CloseWindow()
 
     rl.InitAudioDevice()
@@ -91,6 +95,11 @@ main :: proc() {
         defer free_all(context.temp_allocator)
 
         rl.UpdateMusicStream(audio)
+
+        if app.update_title {
+            rl.SetWindowTitle(strings.clone_to_cstring(fmt.tprintf("SMP | %s", os.base(app.tracks[app.current_track]))))
+            app.update_title = false
+        }
 
         if app.playing && (app.track_time.total - app.track_time.played) <= 0.1 {
             if app.repeat == .Single {
@@ -229,6 +238,7 @@ measure_text :: proc(t: ^lx.Text, ctx: ^lx.Context) -> lx.Vec2 {
 
 next_prev :: proc(app: ^App, direction: Direction) {
     if app.repeat == .Single { return }
+    app.update_title = true
 
     switch direction {
     case .Prev:
@@ -293,7 +303,8 @@ build_layout :: proc(render_w, render_h : i32, ctx: ^lx.Context, app: ^App) -> ^
     if show_tracklist {
         for track, index in app.tracks {
             bg := lavender_ish if app.current_track == index else lx.Color{ 120, 120, 120, 200 }
-            if lx.button(tracklist, os.stem(track), -1, 40, ctx = ctx, size_mode = .Mixed, justify = .Start, style = { bg = bg, round = 10 }) {
+            if lx.button(tracklist, os.stem(track), -1, 40, ctx = ctx, size_mode = .Mixed, justify = .Start,
+                style = { bg = bg, round = 10, font_size = FONT_SIZE }) {
                 app.current_track = index
             }
         }
