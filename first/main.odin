@@ -180,6 +180,7 @@ rebuild :: proc() {
 
 get_version :: proc() -> string {
 	DEFAULT_TAG :: "v0.0.0-1"
+	DEFAULT_HASH :: "0000000"
 
 	commit_state, commit_out, c_err_msg := run_command(
 		Command {
@@ -188,7 +189,11 @@ get_version :: proc() -> string {
 			silent = true,
 		},
 	)
-	if !commit_state.success { fatal(c_err_msg) }
+	if !commit_state.success {
+		commit_out = DEFAULT_HASH
+		fmt.eprintln("[WARN] Failed to get git hash:", c_err_msg)
+	}
+
 	commit_hash := strings.trim_right(commit_out, "\n")
 
 	tag_state, tag_out, t_err_msg := run_command(
